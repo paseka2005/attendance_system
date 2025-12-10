@@ -487,15 +487,19 @@
             <div class="right-column">
                 <!-- Посещаемость -->
                 <div class="section">
-                    <div class="attendance-header">
-                        <h2 style="margin-bottom: 0;">
-                            Посещаемость
-                            <span id="currentClass" style="font-size: 1rem; color: #666;">Не выбрано</span>
-                        </h2>
-                        <button onclick="refreshAttendance()" class="refresh-btn" id="refreshBtn" style="margin-left: 10px;">
-                            🔄 Обновить
-                        </button>
-                    </div>
+             <div class="attendance-header">
+    <div style="flex: 1;">
+        <h2 style="margin-bottom: 5px;">
+            Посещаемость
+        </h2>
+        <div id="currentClass" style="font-size: 0.95rem; color: #1e3c72; font-weight: 600; margin-bottom: 10px;">
+            Не выбрано
+        </div>
+    </div>
+    <button onclick="refreshAttendance()" class="refresh-btn" id="refreshBtn">
+        🔄 Обновить
+    </button>
+</div>
                     
                     <div class="auto-refresh-info">
                         Автообновление каждые 30 секунд
