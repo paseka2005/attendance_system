@@ -118,19 +118,15 @@ def index():
 @app.route('/scan')
 def scan():
     """Страница сканирования для студентов"""
-    # Получаем токен из URL
+    # Получаем токен из URL (если есть)
     token = request.args.get('token')
     
     # Можно добавить логику для определения мобильного устройства
     user_agent = request.headers.get('User-Agent', '').lower()
     is_mobile = any(word in user_agent for word in ['mobile', 'android', 'iphone'])
     
-    if token:
-        # Если есть токен, показываем страницу для отметки
-        return render_template('scan.html', is_mobile=is_mobile, token=token)
-    else:
-        # Если нет токена, показываем инструкцию
-        return render_template('scan.html', is_mobile=is_mobile, token=None)
+    # Передаем токен в шаблон
+    return render_template('scan.html', is_mobile=is_mobile, token=token)
 
 # ================== API ДЛЯ ЗАНЯТИЙ ==================
 
@@ -159,11 +155,12 @@ def create_class():
         conn.commit()
         conn.close()
         
-        print(f"✅ Создано занятие: {subject} (ID: {class_id})")
+        print(f"✅ Создано занятие: {subject} (ID: {class_id}, токен: {qr_token})")
         
         return jsonify({
             'success': True,
             'class_id': class_id,
+            'qr_token': qr_token,
             'message': 'Занятие успешно создано'
         })
         
@@ -270,25 +267,40 @@ def generate_qr(class_id):
         return send_file(
             img_buffer,
             mimetype='image/png',
-            as_attachment=False
+            as_attachment=False,
+            download_name=f'qr_code_{class_id}.png'
         )
         
     except Exception as e:
         print(f"❌ Ошибка генерации QR-кода: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-# ================== ОБРАБОТКА ОТМЕТКИ ПОСЕЩАЕМОСТИ ==================
+# ================== ОТМЕТКА ПОСЕЩАЕМОСТИ ==================
 
 @app.route('/api/mark_attendance', methods=['POST'])
 def mark_attendance():
-    """Обработка отметки посещаемости по QR-коду"""
+    """Обработка отметки посещаемости по QR-коду (для студентов)"""
     try:
-        data = request.json
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'success': False, 'error': 'Нет данных в запросе'}), 400
+        
         token = data.get('token')
         student_id = data.get('student_id')
         
-        if not token or not student_id:
-            return jsonify({'success': False, 'error': 'Отсутствует токен или ID студента'})
+        print(f"📱 Получена отметка: token={token}, student_id={student_id}")
+        
+        if not token:
+            return jsonify({'success': False, 'error': 'Отсутствует токен QR-кода'}), 400
+        
+        if not student_id:
+            return jsonify({'success': False, 'error': 'Отсутствует ID студента'}), 400
+        
+        try:
+            student_id = int(student_id)
+        except ValueError:
+            return jsonify({'success': False, 'error': 'Неверный формат ID студента'}), 400
         
         conn = get_db()
         c = conn.cursor()
@@ -299,7 +311,8 @@ def mark_attendance():
         
         if not class_data:
             conn.close()
-            return jsonify({'success': False, 'error': 'Неверный QR-код или занятие не найдено'})
+            print(f"❌ Токен не найден: {token}")
+            return jsonify({'success': False, 'error': 'Неверный QR-код или занятие не найдено'}), 404
         
         # Проверяем существование студента
         c.execute("SELECT * FROM students WHERE id = ?", (student_id,))
@@ -307,7 +320,8 @@ def mark_attendance():
         
         if not student_data:
             conn.close()
-            return jsonify({'success': False, 'error': 'Студент не найден'})
+            print(f"❌ Студент не найден: {student_id}")
+            return jsonify({'success': False, 'error': 'Студент не найден'}), 404
         
         class_id = class_data['id']
         scan_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -318,40 +332,55 @@ def mark_attendance():
                   (student_id, class_id))
         existing = c.fetchone()
         
+        student_dict = dict(student_data)
+        class_dict = dict(class_data)
+        
         if existing:
             # Обновляем существующую запись
             c.execute('''UPDATE attendance 
                          SET status = 'present', scan_time = ?
                          WHERE student_id = ? AND class_id = ?''',
                       (scan_time, student_id, class_id))
-            message = 'Статус обновлен на "присутствовал"'
+            message = '✅ Ваше присутствие было обновлено'
+            print(f"🔄 Обновлена отметка для студента {student_id} на занятии {class_id}")
         else:
             # Создаем новую запись
             c.execute('''INSERT INTO attendance 
                          (student_id, class_id, status, scan_time)
                          VALUES (?, ?, 'present', ?)''',
                       (student_id, class_id, scan_time))
-            message = 'Отметка о присутствии сохранена'
+            message = '✅ Вы успешно отметились на занятии!'
+            print(f"✅ Новая отметка: студент {student_id}, занятие {class_id}")
         
         conn.commit()
         conn.close()
         
+        print(f"✅ Успешная отметка: студент {student_dict['name']}, предмет {class_dict['subject']}")
+        
         return jsonify({
             'success': True,
             'message': message,
-            'student': dict(student_data),
-            'class': {
-                'subject': class_data['subject'],
-                'date_time': class_data['date_time']
+            'student': {
+                'id': student_dict['id'],
+                'name': student_dict['name'],
+                'group_name': student_dict['group_name']
             },
-            'scan_time': scan_time
+            'class': {
+                'id': class_dict['id'],
+                'subject': class_dict['subject'],
+                'date_time': class_dict['date_time']
+            },
+            'scan_time': scan_time,
+            'timestamp': datetime.now().isoformat()
         })
         
+    except sqlite3.Error as e:
+        print(f"❌ Ошибка базы данных при отметке: {str(e)}")
+        return jsonify({'success': False, 'error': f'Ошибка базы данных: {str(e)}'}), 500
+        
     except Exception as e:
-        print(f"❌ Ошибка при отметке посещаемости: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-# ================== УПРАВЛЕНИЕ ПОСЕЩАЕМОСТЬЮ ==================
+        print(f"❌ Неожиданная ошибка при отметке посещаемости: {str(e)}")
+        return jsonify({'success': False, 'error': f'Внутренняя ошибка сервера: {str(e)}'}), 500
 
 @app.route('/api/get_attendance/<int:class_id>')
 def get_attendance(class_id):
@@ -377,7 +406,7 @@ def get_attendance(class_id):
 
 @app.route('/api/update_status', methods=['POST'])
 def update_status():
-    """Ручное изменение статуса посещаемости"""
+    """Ручное изменение статуса посещаемости (для преподавателя)"""
     try:
         data = request.json
         student_id = data.get('student_id')
@@ -425,11 +454,12 @@ def export_csv(class_id):
         class_info = c.fetchone()
         
         if not class_info:
-            return "Занятие не найдено", 404
+            return jsonify({'error': 'Занятие не найдено'}), 404
         
         # Получаем посещаемость
         c.execute('''SELECT s.name, s.group_name, 
-                            COALESCE(a.status, 'absent') as status
+                            COALESCE(a.status, 'absent') as status,
+                            a.scan_time
                      FROM students s
                      LEFT JOIN attendance a ON s.id = a.student_id AND a.class_id = ?
                      ORDER BY s.group_name, s.name''', (class_id,))
@@ -447,7 +477,7 @@ def export_csv(class_id):
         writer.writerow(['Предмет', class_info['subject']])
         writer.writerow(['Дата проведения', class_info['date_time']])
         writer.writerow([])  # Пустая строка
-        writer.writerow(['Студент', 'Группа', 'Статус посещаемости'])
+        writer.writerow(['Студент', 'Группа', 'Статус посещаемости', 'Время отметки'])
         
         for row in attendance:
             # Преобразуем статус на русский
@@ -460,7 +490,8 @@ def export_csv(class_id):
             writer.writerow([
                 row['name'],
                 row['group_name'],
-                status_ru
+                status_ru,
+                row['scan_time'] or ''
             ])
         
         output.seek(0)
@@ -481,7 +512,7 @@ def export_csv(class_id):
         
     except Exception as e:
         print(f"❌ Ошибка экспорта: {str(e)}")
-        return f"Ошибка экспорта: {str(e)}", 500
+        return jsonify({'error': str(e)}), 500
 
 # ================== СИСТЕМНЫЕ МАРШРУТЫ ==================
 
@@ -499,10 +530,19 @@ def health_check():
     
     return jsonify({
         'status': 'running',
+        'service': 'Attendance System',
+        'version': '1.0.0',
         'python_version': os.environ.get('PYTHON_VERSION', 'unknown'),
         'on_render': 'RENDER' in os.environ,
         'database': db_status,
-        'timestamp': datetime.now().isoformat()
+        'timestamp': datetime.now().isoformat(),
+        'api_endpoints': {
+            'create_class': '/api/create_class',
+            'get_classes': '/api/get_classes',
+            'mark_attendance': '/api/mark_attendance',
+            'generate_qr': '/api/generate_qr/<class_id>',
+            'health': '/health'
+        }
     })
 
 @app.route('/api/test_qr/<int:class_id>')
@@ -532,7 +572,8 @@ def test_qr(class_id):
             'subject': class_data['subject'],
             'qr_token': class_data['qr_token'],
             'qr_data': qr_data,
-            'qr_link': f"{base_url}/api/generate_qr/{class_id}"
+            'qr_link': f"{base_url}/api/generate_qr/{class_id}",
+            'scan_url': qr_data
         })
         
     except Exception as e:
@@ -544,12 +585,121 @@ def test_mark():
     if request.method == 'GET':
         # Показываем форму для тестирования
         return '''
-        <h1>Тест отметки посещаемости</h1>
-        <form method="POST">
-            Токен: <input name="token" value=""><br>
-            Student ID: <input name="student_id" value="1"><br>
-            <button type="submit">Тест</button>
-        </form>
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Тест отметки посещаемости</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 40px; }
+                .container { max-width: 600px; margin: 0 auto; }
+                input, button { padding: 10px; margin: 5px; }
+                .result { margin-top: 20px; padding: 15px; border-radius: 5px; }
+                .success { background: #d4edda; color: #155724; }
+                .error { background: #f8d7da; color: #721c24; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>🔧 Тестирование системы отметки</h1>
+                
+                <h3>Тест 1: Проверка соединения</h3>
+                <button onclick="testConnection()">Проверить соединение</button>
+                
+                <h3>Тест 2: Проверка студента</h3>
+                <input type="number" id="studentIdTest" placeholder="ID студента (1-3)" value="1">
+                <button onclick="testStudent()">Проверить студента</button>
+                
+                <h3>Тест 3: Полный тест отметки</h3>
+                <input type="text" id="tokenTest" placeholder="Токен QR-кода" style="width: 300px;">
+                <input type="number" id="studentIdMark" placeholder="ID студента" value="1">
+                <button onclick="testMark()">Тест отметки</button>
+                
+                <h3>Тест 4: Получить список занятий</h3>
+                <button onclick="getClasses()">Получить занятия</button>
+                
+                <div id="result" class="result"></div>
+            </div>
+            
+            <script>
+                function showResult(message, type) {
+                    const div = document.getElementById('result');
+                    div.textContent = message;
+                    div.className = 'result ' + type;
+                }
+                
+                async function testConnection() {
+                    try {
+                        const response = await fetch('/health');
+                        const data = await response.json();
+                        showResult(JSON.stringify(data, null, 2), 'success');
+                    } catch (error) {
+                        showResult('❌ Ошибка: ' + error.message, 'error');
+                    }
+                }
+                
+                async function testStudent() {
+                    const studentId = document.getElementById('studentIdTest').value;
+                    try {
+                        const response = await fetch('/api/get_classes');
+                        const classes = await response.json();
+                        if (classes.length > 0) {
+                            showResult(`✅ Занятий найдено: ${classes.length}\\nПервый токен: ${classes[0].qr_token}`, 'success');
+                        } else {
+                            showResult('⚠️ Занятий нет. Сначала создайте занятие.', 'error');
+                        }
+                    } catch (error) {
+                        showResult('❌ Ошибка: ' + error.message, 'error');
+                    }
+                }
+                
+                async function testMark() {
+                    const token = document.getElementById('tokenTest').value;
+                    const studentId = document.getElementById('studentIdMark').value;
+                    
+                    if (!token) {
+                        showResult('❌ Введите токен', 'error');
+                        return;
+                    }
+                    
+                    try {
+                        const response = await fetch('/api/mark_attendance', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ token: token, student_id: studentId })
+                        });
+                        const data = await response.json();
+                        showResult(JSON.stringify(data, null, 2), data.success ? 'success' : 'error');
+                    } catch (error) {
+                        showResult('❌ Ошибка: ' + error.message, 'error');
+                    }
+                }
+                
+                async function getClasses() {
+                    try {
+                        const response = await fetch('/api/get_classes');
+                        const data = await response.json();
+                        if (data.length > 0) {
+                            let html = '<h4>Список занятий:</h4><ul>';
+                            data.forEach(cls => {
+                                html += `<li>ID: ${cls.id}, Предмет: ${cls.subject}, Токен: ${cls.qr_token}</li>`;
+                            });
+                            html += '</ul>';
+                            document.getElementById('result').innerHTML = html;
+                            document.getElementById('tokenTest').value = data[0]?.qr_token || '';
+                        } else {
+                            showResult('⚠️ Занятий нет. Сначала создайте занятие.', 'error');
+                        }
+                    } catch (error) {
+                        showResult('❌ Ошибка: ' + error.message, 'error');
+                    }
+                }
+                
+                // Автозагрузка при открытии
+                window.onload = getClasses;
+            </script>
+        </body>
+        </html>
         '''
     else:
         # Эмулируем запрос от QR-сканера
@@ -572,15 +722,67 @@ def test_mark():
             'token_exists': bool(class_data),
             'student_exists': bool(student_data),
             'class_info': dict(class_data) if class_data else None,
-            'student_info': dict(student_data) if student_data else None
+            'student_info': dict(student_data) if student_data else None,
+            'suggestion': 'Используйте /api/mark_attendance для реальной отметки'
         })
+
+@app.route('/api/get_students')
+def get_students():
+    """Получение списка всех студентов"""
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("SELECT * FROM students ORDER BY group_name, name")
+        students = [dict(row) for row in c.fetchall()]
+        conn.close()
+        return jsonify(students)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/verify_token/<token>')
+def verify_token(token):
+    """Проверка валидности токена"""
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        
+        c.execute("SELECT id, subject, date_time FROM classes WHERE qr_token = ?", (token,))
+        class_data = c.fetchone()
+        
+        conn.close()
+        
+        if class_data:
+            return jsonify({
+                'valid': True,
+                'class': dict(class_data),
+                'message': 'Токен действителен'
+            })
+        else:
+            return jsonify({
+                'valid': False,
+                'message': 'Неверный токен'
+            })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 # ================== ЗАПУСК ПРИЛОЖЕНИЯ ==================
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
+    print(f"\n{'='*50}")
     print(f"🚀 Запуск системы контроля посещаемости")
     print(f"📁 Путь к БД: {DB_PATH}")
     print(f"🌐 Порт: {port}")
-    print(f"⚙️ Режим: {'PRODUCTION' if 'RENDER' in os.environ else 'DEVELOPMENT'}")
-    app.run(host='0.0.0.0', port=port, debug=False)  # debug=False для продакшена
+    print(f"⚙️ Режим: {'PRODUCTION (Render)' if 'RENDER' in os.environ else 'DEVELOPMENT'}")
+    print(f"📊 Студентов в базе: 3 (тестовые данные)")
+    print(f"📡 API эндпоинты:")
+    print(f"   • Главная страница: /")
+    print(f"   • Сканирование: /scan")
+    print(f"   • Создание занятия: /api/create_class (POST)")
+    print(f"   • Отметка посещаемости: /api/mark_attendance (POST)")
+    print(f"   • Генерация QR: /api/generate_qr/<class_id>")
+    print(f"   • Проверка здоровья: /health")
+    print(f"{'='*50}\n")
+    
+    app.run(host='0.0.0.0', port=port, debug=('RENDER' not in os.environ))
