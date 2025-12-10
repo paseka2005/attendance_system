@@ -321,6 +321,23 @@
         .hidden {
             display: none !important;
         }
+        
+        .reset-btn {
+            background: #ffc107;
+            color: #000;
+            border: none;
+            border-radius: 5px;
+            padding: 8px 15px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin-top: 10px;
+            width: 100%;
+            font-weight: 600;
+        }
+        
+        .reset-btn:hover {
+            background: #e0a800;
+        }
     </style>
 </head>
 <body>
@@ -363,6 +380,9 @@
                 <div style="font-size: 0.9rem; color: #666; margin-top: 5px;">
                     Готово к сканированию...
                 </div>
+                <button onclick="resetSelection()" class="reset-btn">
+                    🔄 Выбрать другого студента
+                </button>
             </div>
             
             <div class="scanning-status">
@@ -409,9 +429,6 @@
             currentStudentId = this.value;
             
             if (currentStudentId) {
-                // Сохраняем выбор в localStorage
-                localStorage.setItem('lastStudent', currentStudentId);
-                
                 // Показываем выбранного студента
                 const studentInfo = document.getElementById('selectedStudentInfo');
                 const studentNameDisplay = document.getElementById('studentNameDisplay');
@@ -663,10 +680,7 @@
                     
                     // Разблокируем выбор студента для повторной попытки
                     setTimeout(() => {
-                        document.getElementById('studentSelect').disabled = false;
-                        document.getElementById('studentSelect').value = '';
-                        document.getElementById('selectedStudentInfo').classList.add('hidden');
-                        updateScanStatus('waiting', '⏳ Ожидание выбора студента');
+                        resetSelection();
                     }, 3000);
                 }
             } catch (error) {
@@ -677,10 +691,7 @@
                 
                 // Разблокируем выбор студента
                 setTimeout(() => {
-                    document.getElementById('studentSelect').disabled = false;
-                    document.getElementById('studentSelect').value = '';
-                    document.getElementById('selectedStudentInfo').classList.add('hidden');
-                    updateScanStatus('waiting', '⏳ Ожидание выбора студента');
+                    resetSelection();
                 }, 3000);
             }
         }
@@ -718,14 +729,41 @@
             resultDiv.classList.remove('hidden');
         }
         
-        // Автоматический запуск при загрузке, если есть сохраненный студент
-        window.addEventListener('load', function() {
-            const savedStudent = localStorage.getItem('lastStudent');
-            if (savedStudent && students[savedStudent]) {
-                document.getElementById('studentSelect').value = savedStudent;
-                document.getElementById('studentSelect').dispatchEvent(new Event('change'));
+        // Сброс выбора студента
+        function resetSelection() {
+            // Останавливаем сканер, если он запущен
+            if (scanner && isScanning) {
+                scanner.clear();
+                scanner = null;
+                isScanning = false;
             }
-        });
+            
+            // Сбрасываем выбор
+            currentStudentId = null;
+            document.getElementById('studentSelect').value = '';
+            document.getElementById('studentSelect').disabled = false;
+            document.getElementById('selectedStudentInfo').classList.add('hidden');
+            document.getElementById('result').classList.add('hidden');
+            document.getElementById('countdown').classList.add('hidden');
+            
+            // Восстанавливаем начальное состояние сканера
+            const reader = document.getElementById('reader');
+            reader.innerHTML = `
+                <div class="scanner-label hidden">СКАНИРОВАНИЕ</div>
+                <p style="color: #666; text-align: center; padding: 40px;">
+                    Выберите свое имя для активации сканера
+                </p>
+            `;
+            
+            // Обновляем статус
+            updateScanStatus('waiting', '⏳ Ожидание выбора студента');
+            
+            // Очищаем обратный отсчет
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+                countdownInterval = null;
+            }
+        }
         
     </script>
 </body>
