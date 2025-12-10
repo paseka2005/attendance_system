@@ -118,7 +118,10 @@ def index():
 @app.route('/scan')
 def scan():
     """Страница сканирования для студентов"""
-    return render_template('scan.html')
+    # Можно добавить логику для определения мобильного устройства
+    user_agent = request.headers.get('User-Agent', '').lower()
+    is_mobile = any(word in user_agent for word in ['mobile', 'android', 'iphone'])
+    return render_template('scan.html', is_mobile=is_mobile)
 
 # ================== API ДЛЯ ЗАНЯТИЙ ==================
 
