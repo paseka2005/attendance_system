@@ -1,707 +1,516 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Система контроля посещаемости</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
-        body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            overflow: hidden;
-        }
-        
-        header {
-            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
-        
-        h1 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-        }
-        
-        .subtitle {
-            font-size: 1.2rem;
-            opacity: 0.9;
-        }
-        
-        .main-content {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            padding: 30px;
-        }
-        
-        @media (max-width: 768px) {
-            .main-content {
-                grid-template-columns: 1fr;
-            }
-        }
-        
-        .section {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 25px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-        }
-        
-        h2 {
-            color: #333;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #4CAF50;
-        }
-        
-        .form-group {
-            margin-bottom: 20px;
-        }
-        
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #555;
-        }
-        
-        input, select, button {
-            width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: all 0.3s;
-        }
-        
-        input:focus, select:focus {
-            border-color: #4CAF50;
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
-        }
-        
-        button {
-            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-            color: white;
-            border: none;
-            cursor: pointer;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-        }
-        
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 7px 20px rgba(76, 175, 80, 0.3);
-        }
-        
-        button.secondary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            margin-top: 10px;
-        }
-        
-        .classes-list {
-            max-height: 300px;
-            overflow-y: auto;
-            margin-top: 15px;
-        }
-        
-        .class-item {
-            background: white;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 10px;
-            transition: all 0.3s;
-        }
-        
-        .class-item:hover {
-            border-color: #4CAF50;
-            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.1);
-        }
-        
-        .class-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-        }
-        
-        .class-title {
-            font-weight: 600;
-            color: #333;
-            font-size: 1.1rem;
-        }
-        
-        .class-date {
-            color: #666;
-            font-size: 0.9rem;
-        }
-        
-        .class-actions {
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
-        }
-        
-        .class-actions button {
-            padding: 8px 15px;
-            font-size: 14px;
-        }
-        
-        .attendance-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-            background: white;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-        }
-        
-        .attendance-table th {
-            background: #4CAF50;
-            color: white;
-            padding: 15px;
-            text-align: left;
-        }
-        
-        .attendance-table td {
-            padding: 12px 15px;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .attendance-table tr:hover {
-            background: #f5f5f5;
-        }
-        
-        .status-present {
-            background: #d4edda !important;
-            color: #155724;
-        }
-        
-        .status-absent {
-            background: #f8d7da !important;
-            color: #721c24;
-        }
-        
-        .status-late {
-            background: #fff3cd !important;
-            color: #856404;
-        }
-        
-        .qr-container {
-            text-align: center;
-            margin-top: 20px;
-        }
-        
-        .qr-image {
-            max-width: 200px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 10px;
-            background: white;
-        }
-        
-        .student-link {
-            background: #e8f4f8;
-            border: 2px dashed #4CAF50;
-            border-radius: 8px;
-            padding: 15px;
-            margin-top: 20px;
-        }
-        
-        .copy-btn {
-            background: #17a2b8;
-            margin-top: 10px;
-        }
-        
-        .alert {
-            padding: 15px;
-            border-radius: 8px;
-            margin: 15px 0;
-            font-weight: 500;
-        }
-        
-        .alert-success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-        
-        .alert-error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-        
-        .hidden {
-            display: none !important;
-        }
-        
-        footer {
-            text-align: center;
-            padding: 20px;
-            color: #666;
-            border-top: 1px solid #eee;
-            margin-top: 30px;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <header>
-            <h1>🎓 Система контроля посещаемости</h1>
-            <p class="subtitle">Генерация QR-кодов и отслеживание посещаемости студентов</p>
-        </header>
-        
-        <div class="main-content">
-            <!-- Левая колонка: Создание занятия и список -->
-            <div class="left-column">
-                <!-- Форма создания занятия -->
-                <div class="section">
-                    <h2>Создать новое занятие</h2>
-                    <div id="alert" class="alert hidden"></div>
-                    
-                    <div class="form-group">
-                        <label for="subject">Название предмета</label>
-                        <input type="text" id="subject" placeholder="Например: Программирование на Python" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="date_time">Дата и время занятия</label>
-                        <input type="datetime-local" id="date_time" required>
-                    </div>
-                    
-                    <button onclick="createClass()" id="createBtn">📝 Создать занятие</button>
-                </div>
-                
-                <!-- Список занятий -->
-                <div class="section">
-                    <h2>Ваши занятия</h2>
-                    <div id="classesList" class="classes-list">
-                        <p id="noClasses">Занятий пока нет. Создайте первое занятие!</p>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Правая колонка: Посещаемость и QR-код -->
-            <div class="right-column">
-                <!-- Посещаемость -->
-                <div class="section">
-                    <h2 id="attendanceTitle">Посещаемость: <span id="currentClass">Не выбрано</span></h2>
-                    <table class="attendance-table" id="attendanceTable">
-                        <thead>
-                            <tr>
-                                <th>Студент</th>
-                                <th>Группа</th>
-                                <th>Статус</th>
-                                <th>Изменить</th>
-                            </tr>
-                        </thead>
-                        <tbody id="attendanceBody">
-                            <!-- Данные загружаются через JS -->
-                        </tbody>
-                    </table>
-                    <div id="noAttendance" class="hidden">
-                        <p style="text-align: center; padding: 20px; color: #666;">
-                            Выберите занятие для просмотра посещаемости
-                        </p>
-                    </div>
-                </div>
-                
-                <!-- QR-код -->
-                <div class="section">
-                    <h2>QR-код для сканирования</h2>
-                    <div class="qr-container">
-                        <img id="qrImage" class="qr-image hidden" alt="QR Code">
-                        <p id="noQR" style="color: #666; padding: 20px;">
-                            Сгенерируйте QR-код для выбранного занятия
-                        </p>
-                    </div>
-                </div>
-                
-                <!-- Ссылка для студентов -->
-                <div class="section student-link">
-                    <h2>📱 Для студентов</h2>
-                    <p>Ссылка для отметки посещаемости:</p>
-                    <input type="text" id="studentLink" 
-                           value="https://attendance-system-rbif.onrender.com/scan" 
-                           readonly
-                           style="width: 100%; background: white; margin-top: 10px;">
-                    <button onclick="copyLink()" class="copy-btn">📋 Копировать ссылку</button>
-                    <p style="margin-top: 15px; font-size: 0.9rem; color: #555;">
-                        Отправьте эту ссылку студентам или покажите QR-код выше
-                    </p>
-                </div>
-            </div>
-        </div>
-        
-        <footer>
-            <p>Система контроля посещаемости с QR-кодами | Python + Flask + Render</p>
-            <p style="margin-top: 5px; font-size: 0.9rem;">
-                <a href="/scan" style="color: #4CAF50; text-decoration: none;">➡️ Перейти к странице сканирования</a> |
-                <a href="/health" style="color: #4CAF50; text-decoration: none;">🔧 Проверить статус системы</a>
-            </p>
-        </footer>
-    </div>
+import os
+import sqlite3
+import uuid
+import qrcode
+import io
+import csv
+from datetime import datetime
+from flask import Flask, render_template, request, jsonify, send_file
 
-    <script>
-        // Текущее выбранное занятие
-        let selectedClassId = null;
+app = Flask(__name__)
+
+# ================== БАЗА ДАННЫХ ==================
+
+def init_db():
+    """Инициализация базы данных"""
+    # На Render используем /tmp папку, локально - текущую папку
+    if 'RENDER' in os.environ:
+        db_path = '/tmp/attendance.db'
+        print("🔧 Используем БД на Render:", db_path)
+    else:
+        db_path = 'attendance.db'
+        print("🔧 Используем локальную БД:", db_path)
+    
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor()
+    
+    # Таблица студентов (3 человека)
+    c.execute('''CREATE TABLE IF NOT EXISTS students
+                 (id INTEGER PRIMARY KEY, 
+                  name TEXT NOT NULL, 
+                  group_name TEXT NOT NULL)''')
+    
+    # Таблица занятий
+    c.execute('''CREATE TABLE IF NOT EXISTS classes
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  subject TEXT NOT NULL,
+                  date_time TEXT NOT NULL,
+                  qr_token TEXT UNIQUE)''')
+    
+    # Таблица посещаемости
+    c.execute('''CREATE TABLE IF NOT EXISTS attendance
+                 (student_id INTEGER,
+                  class_id INTEGER,
+                  status TEXT DEFAULT 'absent',
+                  scan_time TEXT,
+                  PRIMARY KEY(student_id, class_id))''')
+    
+    # Добавляем 3-х тестовых студентов
+    c.execute("SELECT COUNT(*) FROM students")
+    if c.fetchone()[0] == 0:
+        students = [
+            (1, 'Иван Петров', 'Группа 101'),
+            (2, 'Мария Сидорова', 'Группа 101'),
+            (3, 'Алексей Иванов', 'Группа 102')
+        ]
+        c.executemany("INSERT INTO students VALUES (?, ?, ?)", students)
+        print("✅ Добавлены 3 тестовых студента")
+    
+    conn.commit()
+    conn.close()
+    print("✅ База данных инициализирована")
+    return db_path
+
+def get_db():
+    """Подключение к базе данных"""
+    if 'RENDER' in os.environ:
+        db_path = '/tmp/attendance.db'
+    else:
+        db_path = 'attendance.db'
+    
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row  # Для доступа к колонкам по имени
+    return conn
+
+# Инициализируем БД при старте
+DB_PATH = init_db()
+
+# ================== ГЛАВНЫЕ СТРАНИЦЫ ==================
+
+@app.route('/')
+def index():
+    """Главная страница преподавателя"""
+    try:
+        conn = get_db()
+        c = conn.cursor()
         
-        // Загружаем занятия при загрузке страницы
-        document.addEventListener('DOMContentLoaded', function() {
-            loadClasses();
-            updateStudentLink();
-        });
+        # Получаем все занятия
+        c.execute("SELECT * FROM classes ORDER BY date_time DESC")
+        classes = c.fetchall()
         
-        // Обновляем ссылку для студентов
-        function updateStudentLink() {
-            const baseUrl = window.location.origin;
-            document.getElementById('studentLink').value = `${baseUrl}/scan`;
-        }
+        # Получаем всех студентов
+        c.execute("SELECT * FROM students")
+        students = c.fetchall()
         
-        // Создание занятия
-        async function createClass() {
-            const subject = document.getElementById('subject').value;
-            const dateTime = document.getElementById('date_time').value;
-            const createBtn = document.getElementById('createBtn');
-            const alertDiv = document.getElementById('alert');
-            
-            if (!subject || !dateTime) {
-                showAlert('Заполните все поля!', 'error');
-                return;
-            }
-            
-            // Блокируем кнопку на время запроса
-            createBtn.disabled = true;
-            createBtn.textContent = 'Создание...';
-            
-            try {
-                const formData = new FormData();
-                formData.append('subject', subject);
-                formData.append('date_time', dateTime);
-                
-                const response = await fetch('/api/create_class', {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    showAlert('✅ Занятие успешно создано!', 'success');
-                    // Очищаем форму
-                    document.getElementById('subject').value = '';
-                    document.getElementById('date_time').value = '';
-                    // Перезагружаем список занятий
-                    loadClasses();
-                } else {
-                    showAlert(`❌ Ошибка: ${result.error || 'Неизвестная ошибка'}`, 'error');
-                }
-            } catch (error) {
-                showAlert(`❌ Ошибка сети: ${error.message}`, 'error');
-                console.error('Ошибка создания занятия:', error);
-            } finally {
-                // Восстанавливаем кнопку
-                createBtn.disabled = false;
-                createBtn.textContent = '📝 Создать занятие';
-            }
-        }
+        # Получаем посещаемость для последнего занятия (если есть)
+        attendance = []
+        selected_class_id = None
         
-        // Загрузка списка занятий
-        async function loadClasses() {
-            try {
-                const response = await fetch('/api/get_classes');
-                const classes = await response.json();
-                
-                const classesList = document.getElementById('classesList');
-                const noClasses = document.getElementById('noClasses');
-                
-                if (classes.length === 0) {
-                    noClasses.style.display = 'block';
-                    classesList.innerHTML = '<p id="noClasses">Занятий пока нет. Создайте первое занятие!</p>';
-                    return;
-                }
-                
-                noClasses.style.display = 'none';
-                
-                let html = '';
-                classes.forEach(cls => {
-                    const date = new Date(cls.date_time);
-                    const formattedDate = date.toLocaleString('ru-RU', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    });
-                    
-                    html += `
-                        <div class="class-item" id="class-${cls.id}">
-                            <div class="class-header">
-                                <div>
-                                    <div class="class-title">${cls.subject}</div>
-                                    <div class="class-date">${formattedDate}</div>
-                                </div>
-                                <div>
-                                    <small style="color: #666;">ID: ${cls.id}</small>
-                                </div>
-                            </div>
-                            <div class="class-actions">
-                                <button onclick="selectClass(${cls.id}, '${cls.subject}')">
-                                    👁️ Выбрать
-                                </button>
-                                <button onclick="generateQR(${cls.id})" class="secondary">
-                                    📱 QR-код
-                                </button>
-                                <button onclick="exportCSV(${cls.id})" style="background: #6c757d;">
-                                    📊 CSV
-                                </button>
-                            </div>
-                        </div>
-                    `;
-                });
-                
-                classesList.innerHTML = html;
-                
-                // Автоматически выбираем первое занятие в списке
-                if (classes.length > 0 && !selectedClassId) {
-                    selectClass(classes[0].id, classes[0].subject);
-                }
-                
-            } catch (error) {
-                console.error('Ошибка загрузки занятий:', error);
-                showAlert('❌ Не удалось загрузить список занятий', 'error');
-            }
-        }
+        if classes:
+            selected_class_id = classes[0]['id']
+            c.execute('''SELECT s.id, s.name, s.group_name, 
+                                COALESCE(a.status, 'absent') as status
+                         FROM students s
+                         LEFT JOIN attendance a ON s.id = a.student_id AND a.class_id = ?
+                         ORDER BY s.group_name, s.name''', (selected_class_id,))
+            attendance = c.fetchall()
         
-        // Выбор занятия
-        function selectClass(classId, className) {
-            selectedClassId = classId;
-            document.getElementById('currentClass').textContent = className;
-            document.getElementById('attendanceTitle').style.display = 'block';
-            
-            // Подсвечиваем выбранное занятие
-            document.querySelectorAll('.class-item').forEach(item => {
-                item.style.borderColor = '#e0e0e0';
-            });
-            const selectedElement = document.getElementById(`class-${classId}`);
-            if (selectedElement) {
-                selectedElement.style.borderColor = '#4CAF50';
-                selectedElement.style.boxShadow = '0 0 0 2px rgba(76, 175, 80, 0.2)';
-            }
-            
-            // Загружаем посещаемость для этого занятия
-            loadAttendance(classId);
-        }
+        conn.close()
         
-        // Загрузка посещаемости
-        async function loadAttendance(classId) {
-            try {
-                const response = await fetch(`/api/get_attendance/${classId}`);
-                const attendance = await response.json();
-                
-                const attendanceBody = document.getElementById('attendanceBody');
-                const noAttendance = document.getElementById('noAttendance');
-                const attendanceTable = document.getElementById('attendanceTable');
-                
-                if (attendance.length === 0) {
-                    attendanceTable.style.display = 'none';
-                    noAttendance.style.display = 'block';
-                    return;
-                }
-                
-                attendanceTable.style.display = 'table';
-                noAttendance.style.display = 'none';
-                
-                let html = '';
-                attendance.forEach(student => {
-                    const statusClass = `status-${student.status}`;
-                    
-                    html += `
-                        <tr class="${statusClass}">
-                            <td>${student.name}</td>
-                            <td>${student.group_name}</td>
-                            <td>
-                                <span class="status-badge">
-                                    ${getStatusText(student.status)}
-                                </span>
-                            </td>
-                            <td>
-                                <select onchange="updateStatus(${student.id}, this.value)" 
-                                        style="width: auto; padding: 5px 10px;">
-                                    <option value="present" ${student.status === 'present' ? 'selected' : ''}>
-                                        Присутствовал
-                                    </option>
-                                    <option value="absent" ${student.status === 'absent' ? 'selected' : ''}>
-                                        Отсутствовал
-                                    </option>
-                                    <option value="late" ${student.status === 'late' ? 'selected' : ''}>
-                                        Опоздал
-                                    </option>
-                                </select>
-                            </td>
-                        </tr>
-                    `;
-                });
-                
-                attendanceBody.innerHTML = html;
-                
-            } catch (error) {
-                console.error('Ошибка загрузки посещаемости:', error);
-            }
-        }
+        return render_template('index.html',
+                             classes=classes,
+                             students=students,
+                             attendance=attendance,
+                             selected_class=selected_class_id)
+    except Exception as e:
+        return f"Ошибка: {str(e)}", 500
+
+@app.route('/scan')
+def scan():
+    """Страница сканирования для студентов"""
+    return render_template('scan.html')
+
+# ================== API ДЛЯ ЗАНЯТИЙ ==================
+
+@app.route('/api/create_class', methods=['POST'])
+def create_class():
+    """Создание нового занятия"""
+    try:
+        subject = request.form.get('subject', '').strip()
+        date_time = request.form.get('date_time', '').strip()
         
-        // Генерация QR-кода
-        async function generateQR(classId) {
-            try {
-                // Получаем QR-код как изображение
-                const response = await fetch(`/api/generate_qr/${classId}`);
-                
-                if (!response.ok) {
-                    throw new Error('Ошибка генерации QR-кода');
-                }
-                
-                // Создаем URL для изображения
-                const qrImage = document.getElementById('qrImage');
-                const noQR = document.getElementById('noQR');
-                
-                const blob = await response.blob();
-                const imageUrl = URL.createObjectURL(blob);
-                
-                qrImage.src = imageUrl;
-                qrImage.style.display = 'block';
-                noQR.style.display = 'none';
-                
-                showAlert('✅ QR-код сгенерирован!', 'success');
-                
-            } catch (error) {
-                console.error('Ошибка генерации QR-кода:', error);
-                showAlert('❌ Ошибка генерации QR-кода', 'error');
-            }
-        }
+        if not subject or not date_time:
+            return jsonify({'success': False, 'error': 'Заполните все поля'})
         
-        // Обновление статуса студента
-        async function updateStatus(studentId, status) {
-            if (!selectedClassId) {
-                showAlert('Сначала выберите занятие!', 'error');
-                return;
-            }
-            
-            try {
-                const response = await fetch('/api/update_status', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        student_id: studentId,
-                        class_id: selectedClassId,
-                        status: status
-                    })
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    // Обновляем строку в таблице
-                    const row = event.target.closest('tr');
-                    row.className = `status-${status}`;
-                    
-                    // Обновляем текст статуса
-                    const statusCell = row.querySelector('.status-badge');
-                    if (statusCell) {
-                        statusCell.textContent = getStatusText(status);
-                    }
-                }
-                
-            } catch (error) {
-                console.error('Ошибка обновления статуса:', error);
-            }
-        }
+        conn = get_db()
+        c = conn.cursor()
         
-        // Экспорт в CSV
-        async function exportCSV(classId) {
-            try {
-                const response = await fetch(`/api/export_csv/${classId}`);
-                const blob = await response.blob();
-                
-                // Создаем ссылку для скачивания
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `посещаемость_${classId}.csv`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(url);
-                
-            } catch (error) {
-                console.error('Ошибка экспорта:', error);
-                showAlert('❌ Ошибка экспорта данных', 'error');
-            }
-        }
+        # Генерируем уникальный токен для QR-кода
+        qr_token = str(uuid.uuid4())
         
-        // Копирование ссылки
-        function copyLink() {
-            const linkInput = document.getElementById('studentLink');
-            linkInput.select();
-            linkInput.setSelectionRange(0, 99999); // Для мобильных устройств
-            
-            try {
-                navigator.clipboard.writeText(linkInput.value).then(() => {
-                    showAlert('✅ Ссылка скопирована в буфер обмена!', 'success');
-                });
-            } catch (err) {
-                // Fallback для старых браузеров
-                document.execCommand('copy');
-                showAlert('✅ Ссылка скопирована!', 'success');
-            }
-        }
+        c.execute(
+            "INSERT INTO classes (subject, date_time, qr_token) VALUES (?, ?, ?)",
+            (subject, date_time, qr_token)
+        )
         
-        // Вспомогательные функции
-        function getStatusText(status) {
-            const statusMap = {
+        class_id = c.lastrowid
+        conn.commit()
+        conn.close()
+        
+        print(f"✅ Создано занятие: {subject} (ID: {class_id})")
+        
+        return jsonify({
+            'success': True,
+            'class_id': class_id,
+            'message': 'Занятие успешно создано'
+        })
+        
+    except Exception as e:
+        print(f"❌ Ошибка при создании занятия: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/delete_class/<int:class_id>', methods=['DELETE'])
+def delete_class(class_id):
+    """Удаление занятия"""
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        
+        # Сначала удаляем связанную посещаемость
+        c.execute("DELETE FROM attendance WHERE class_id = ?", (class_id,))
+        
+        # Затем удаляем само занятие
+        c.execute("DELETE FROM classes WHERE id = ?", (class_id,))
+        
+        conn.commit()
+        conn.close()
+        
+        print(f"🗑️ Удалено занятие ID: {class_id}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Занятие успешно удалено'
+        })
+        
+    except Exception as e:
+        print(f"❌ Ошибка удаления занятия: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/get_classes')
+def get_classes():
+    """Получение списка всех занятий"""
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("SELECT * FROM classes ORDER BY date_time DESC")
+        classes = [dict(row) for row in c.fetchall()]
+        conn.close()
+        return jsonify(classes)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# ================== ГЕНЕРАЦИЯ QR-КОДОВ ==================
+
+@app.route('/api/generate_qr/<int:class_id>')
+def generate_qr(class_id):
+    """Генерация QR-кода для занятия"""
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        
+        # Получаем занятие
+        c.execute("SELECT * FROM classes WHERE id = ?", (class_id,))
+        class_data = c.fetchone()
+        
+        if not class_data:
+            return jsonify({'error': 'Занятие не найдено'}), 404
+        
+        # Получаем токен занятия
+        qr_token = class_data['qr_token']
+        
+        # Создаем правильную ссылку для отметки
+        # На Render используем абсолютный URL
+        if 'RENDER' in os.environ:
+            # Получаем URL из запроса или используем дефолтный
+            base_url = request.host_url.rstrip('/')
+            # Если это localhost, заменяем на реальный URL Render
+            if 'localhost' in base_url or '127.0.0.1' in base_url:
+                base_url = 'https://attendance-system-rbif.onrender.com'
+        else:
+            base_url = request.host_url.rstrip('/')
+        
+        # Создаем URL для сканирования с токеном
+        qr_data = f"{base_url}/scan?token={qr_token}"
+        
+        print(f"🔗 Генерация QR-кода: {qr_data}")
+        
+        # Генерируем QR-код
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_H,
+            box_size=10,
+            border=4,
+        )
+        qr.add_data(qr_data)
+        qr.make(fit=True)
+        
+        img = qr.make_image(fill_color="black", back_color="white")
+        
+        # Сохраняем в буфер
+        img_buffer = io.BytesIO()
+        img.save(img_buffer, format='PNG')
+        img_buffer.seek(0)
+        
+        conn.close()
+        
+        print(f"✅ QR-код сгенерирован для занятия ID: {class_id}")
+        
+        return send_file(
+            img_buffer,
+            mimetype='image/png',
+            as_attachment=False
+        )
+        
+    except Exception as e:
+        print(f"❌ Ошибка генерации QR-кода: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+# ================== ОТМЕТКА ПОСЕЩАЕМОСТИ ==================
+
+@app.route('/api/mark_attendance', methods=['POST'])
+def mark_attendance():
+    """Отметка посещаемости по токену"""
+    try:
+        data = request.json
+        token = data.get('token')
+        student_id = data.get('student_id')
+        
+        if not token or not student_id:
+            return jsonify({'success': False, 'error': 'Недостаточно данных'})
+        
+        conn = get_db()
+        c = conn.cursor()
+        
+        # Находим занятие по токену
+        c.execute("SELECT id FROM classes WHERE qr_token = ?", (token,))
+        class_data = c.fetchone()
+        
+        if not class_data:
+            return jsonify({'success': False, 'error': 'Неверный QR-код'})
+        
+        class_id = class_data['id']
+        
+        # Проверяем, не отметился ли уже студент
+        c.execute("SELECT * FROM attendance WHERE student_id = ? AND class_id = ?",
+                  (student_id, class_id))
+        
+        if c.fetchone():
+            return jsonify({'success': False, 'error': 'Вы уже отметились'})
+        
+        # Добавляем запись о посещаемости
+        scan_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        c.execute(
+            "INSERT INTO attendance (student_id, class_id, status, scan_time) VALUES (?, ?, 'present', ?)",
+            (student_id, class_id, scan_time)
+        )
+        
+        conn.commit()
+        conn.close()
+        
+        print(f"✅ Отмечена посещаемость: студент {student_id}, занятие {class_id}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Посещаемость успешно отмечена!'
+        })
+        
+    except Exception as e:
+        print(f"❌ Ошибка отметки посещаемости: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# ================== УПРАВЛЕНИЕ ПОСЕЩАЕМОСТЬЮ ==================
+
+@app.route('/api/get_attendance/<int:class_id>')
+def get_attendance(class_id):
+    """Получение посещаемости для занятия"""
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        
+        c.execute('''SELECT s.id, s.name, s.group_name, 
+                            COALESCE(a.status, 'absent') as status,
+                            a.scan_time
+                     FROM students s
+                     LEFT JOIN attendance a ON s.id = a.student_id AND a.class_id = ?
+                     ORDER BY s.group_name, s.name''', (class_id,))
+        
+        attendance = [dict(row) for row in c.fetchall()]
+        conn.close()
+        
+        return jsonify(attendance)
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/update_status', methods=['POST'])
+def update_status():
+    """Ручное изменение статуса посещаемости"""
+    try:
+        data = request.json
+        student_id = data.get('student_id')
+        class_id = data.get('class_id')
+        status = data.get('status')
+        
+        if not all([student_id, class_id, status]):
+            return jsonify({'success': False, 'error': 'Не все данные указаны'})
+        
+        conn = get_db()
+        c = conn.cursor()
+        
+        # Обновляем статус
+        if status == 'present':
+            scan_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            c.execute('''INSERT OR REPLACE INTO attendance 
+                         (student_id, class_id, status, scan_time)
+                         VALUES (?, ?, ?, ?)''',
+                      (student_id, class_id, status, scan_time))
+        else:
+            c.execute('''INSERT OR REPLACE INTO attendance 
+                         (student_id, class_id, status, scan_time)
+                         VALUES (?, ?, ?, NULL)''',
+                      (student_id, class_id, status))
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'success': True, 'message': 'Статус обновлен'})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# ================== ЭКСПОРТ В EXCEL (CSV) ==================
+
+@app.route('/api/export_csv/<int:class_id>')
+def export_csv(class_id):
+    """Экспорт посещаемости в CSV с русскими статусами"""
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        
+        # Получаем данные занятия
+        c.execute("SELECT subject, date_time FROM classes WHERE id = ?", (class_id,))
+        class_info = c.fetchone()
+        
+        if not class_info:
+            return "Занятие не найдено", 404
+        
+        # Получаем посещаемость
+        c.execute('''SELECT s.name, s.group_name, 
+                            COALESCE(a.status, 'absent') as status
+                     FROM students s
+                     LEFT JOIN attendance a ON s.id = a.student_id AND a.class_id = ?
+                     ORDER BY s.group_name, s.name''', (class_id,))
+        
+        attendance = c.fetchall()
+        conn.close()
+        
+        # Создаем CSV в памяти с BOM для русского Excel
+        output = io.StringIO()
+        
+        # Используем точку с запятой как разделитель (лучше для русского Excel)
+        writer = csv.writer(output, delimiter=';')
+        
+        # Заголовки на русском
+        writer.writerow(['Предмет', class_info['subject']])
+        writer.writerow(['Дата проведения', class_info['date_time']])
+        writer.writerow([])  # Пустая строка
+        writer.writerow(['Студент', 'Группа', 'Статус посещаемости'])
+        
+        for row in attendance:
+            # Преобразуем статус на русский
+            status_ru = {
                 'present': 'Присутствовал',
-                'absent': 'Отсутствовал',
+                'absent': 'Отсутствовал', 
                 'late': 'Опоздал'
-            };
-            return statusMap[status] || status;
-        }
-        
-        function showAlert(message, type) {
-            const alertDiv = document.getElementById('alert');
-            alertDiv.textContent = message;
-            alertDiv.className = `alert alert-${type}`;
-            alertDiv.style.display = 'block';
+            }.get(row['status'], row['status'])
             
-            // Автоматически скрываем через 5 секунд
-            setTimeout(() => {
-                alertDiv.style.display = 'none';
-            }, 5000);
-        }
+            writer.writerow([
+                row['name'],
+                row['group_name'],
+                status_ru
+            ])
         
-        // Автоматическое обновление списка каждые 30 секунд
-        setInterval(loadClasses, 30000);
+        output.seek(0)
         
-    </script>
-</body>
-</html>
+        # Кодируем в UTF-8 с BOM для Excel
+        csv_data = output.getvalue().encode('utf-8-sig')
+        
+        # Создаем имя файла с датой
+        date_str = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f'посещаемость_{class_info["subject"]}_{date_str}.csv'
+        
+        return send_file(
+            io.BytesIO(csv_data),
+            mimetype='text/csv; charset=utf-8-sig',
+            as_attachment=True,
+            download_name=filename
+        )
+        
+    except Exception as e:
+        print(f"❌ Ошибка экспорта: {str(e)}")
+        return f"Ошибка экспорта: {str(e)}", 500
+
+# ================== СИСТЕМНЫЕ МАРШРУТЫ ==================
+
+@app.route('/health')
+def health_check():
+    """Проверка здоровья приложения"""
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("SELECT 1")
+        db_status = "OK"
+        conn.close()
+    except Exception as e:
+        db_status = f"ERROR: {str(e)}"
+    
+    return jsonify({
+        'status': 'running',
+        'python_version': os.environ.get('PYTHON_VERSION', 'unknown'),
+        'on_render': 'RENDER' in os.environ,
+        'database': db_status,
+        'timestamp': datetime.now().isoformat()
+    })
+
+@app.route('/api/test_qr/<int:class_id>')
+def test_qr(class_id):
+    """Тестовый маршрут для проверки QR-кода"""
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        
+        c.execute("SELECT * FROM classes WHERE id = ?", (class_id,))
+        class_data = c.fetchone()
+        
+        if not class_data:
+            return jsonify({'error': 'Занятие не найдено'}), 404
+        
+        # Определяем правильный URL
+        if 'RENDER' in os.environ:
+            base_url = 'https://attendance-system-rbif.onrender.com'
+        else:
+            base_url = request.host_url.rstrip('/')
+        
+        qr_data = f"{base_url}/scan?token={class_data['qr_token']}"
+        
+        return jsonify({
+            'success': True,
+            'class_id': class_id,
+            'subject': class_data['subject'],
+            'qr_token': class_data['qr_token'],
+            'qr_data': qr_data,
+            'qr_link': f"{base_url}/api/generate_qr/{class_id}"
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# ================== ЗАПУСК ПРИЛОЖЕНИЯ ==================
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
+    print(f"🚀 Запуск системы контроля посещаемости")
+    print(f"📁 Путь к БД: {DB_PATH}")
+    print(f"🌐 Порт: {port}")
+    print(f"⚙️ Режим: {'PRODUCTION' if 'RENDER' in os.environ else 'DEVELOPMENT'}")
+    app.run(host='0.0.0.0', port=port, debug=True)
