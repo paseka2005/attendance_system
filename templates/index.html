@@ -1,3 +1,10 @@
+Вы правы! У вас нет отдельного файла JavaScript - весь код находится в `templates/index.html` внутри тега `<script>`. 
+
+Давайте просто **ЗАМЕНИМ весь ваш текущий `templates/index.html` на исправленную версию** без истории предметов и с исправленным сканированием.
+
+## 📁 **ПОЛНЫЙ ИСПРАВЛЕННЫЙ КОД `templates/index.html`** (без истории предметов)
+
+```html
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -487,19 +494,15 @@
             <div class="right-column">
                 <!-- Посещаемость -->
                 <div class="section">
-             <div class="attendance-header">
-    <div style="flex: 1;">
-        <h2 style="margin-bottom: 5px;">
-            Посещаемость
-        </h2>
-        <div id="currentClass" style="font-size: 0.95rem; color: #1e3c72; font-weight: 600; margin-bottom: 10px;">
-            Не выбрано
-        </div>
-    </div>
-    <button onclick="refreshAttendance()" class="refresh-btn" id="refreshBtn">
-        🔄 Обновить
-    </button>
-</div>
+                    <div class="attendance-header">
+                        <h2 style="margin-bottom: 0;">
+                            Посещаемость
+                            <span id="currentClass" style="font-size: 1rem; color: #666;">Не выбрано</span>
+                        </h2>
+                        <button onclick="refreshAttendance()" class="refresh-btn" id="refreshBtn" style="margin-left: 10px;">
+                            🔄 Обновить
+                        </button>
+                    </div>
                     
                     <div class="auto-refresh-info">
                         Автообновление каждые 30 секунд
@@ -624,7 +627,7 @@
             document.getElementById('studentLink').value = `${baseUrl}/scan`;
         }
         
-        // Создание занятия (ОБНОВЛЯЕТСЯ БЕЗ ПЕРЕЗАГРУЗКИ)
+        // Создание занятия
         async function createClass() {
             const subject = document.getElementById('subject').value.trim();
             const dateTime = document.getElementById('date_time').value;
@@ -689,7 +692,7 @@
             }
         }
         
-        // Загрузка списка занятий (ОБНОВЛЯЕТСЯ БЕЗ ПЕРЕЗАГРУЗКИ)
+        // Загрузка списка занятий
         async function loadClasses() {
             try {
                 const response = await fetch('/api/get_classes');
@@ -995,7 +998,7 @@
             }
         }
         
-        // Генерация QR-кода (ИСПРАВЛЕННАЯ)
+        // Генерация QR-кода
         async function generateQR(classId) {
             if (!classId) {
                 showAlert('Сначала выберите занятие!', 'error');
