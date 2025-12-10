@@ -1,124 +1,415 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-    <title>Отметка посещаемости</title>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Сканирование QR-кода</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        body { font-family: Arial; text-align: center; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; color: white; }
-        .container { max-width: 500px; margin: 0 auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); color: #333; }
-        h1 { color: #333; margin-bottom: 20px; }
-        #reader { width: 100%; margin: 20px auto; }
-        #result { padding: 15px; margin: 20px 0; border-radius: 5px; font-weight: bold; }
-        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-        select, button { padding: 12px 20px; margin: 10px; font-size: 16px; border: none; border-radius: 5px; }
-        select { width: 100%; border: 2px solid #667eea; }
-        button { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-weight: bold; cursor: pointer; }
-        button:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
-        .info { background: #e9ecef; padding: 15px; border-radius: 5px; margin: 20px 0; color: #495057; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 500px;
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            opacity: 0.9;
+            font-size: 1rem;
+        }
+        
+        .main-content {
+            padding: 30px;
+        }
+        
+        .info-box {
+            background: #e8f4f8;
+            border: 2px solid #4CAF50;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+        
+        .info-box h3 {
+            color: #333;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .info-box ol {
+            margin-left: 20px;
+            color: #555;
+        }
+        
+        .info-box li {
+            margin-bottom: 8px;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #333;
+            font-size: 1.1rem;
+        }
+        
+        select {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 16px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        select:focus {
+            border-color: #4CAF50;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
+        }
+        
+        #reader {
+            width: 100%;
+            margin: 20px 0;
+            border: 2px dashed #4CAF50;
+            border-radius: 10px;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+        
+        #result {
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-weight: 600;
+            text-align: center;
+            font-size: 1.1rem;
+            display: none;
+        }
+        
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block !important;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block !important;
+        }
+        
+        .buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 25px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 16px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(76, 175, 80, 0.3);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            border-top: 1px solid #eee;
+            margin-top: 20px;
+        }
+        
+        @media (max-width: 480px) {
+            .buttons {
+                flex-direction: column;
+            }
+            
+            h1 {
+                font-size: 1.5rem;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>📱 Отметка посещаемости</h1>
+        <header>
+            <h1>📱 Отметка посещаемости</h1>
+            <p class="subtitle">Используйте камеру телефона для сканирования QR-кода</p>
+        </header>
         
-        <div class="info">
-            <strong>Инструкция:</strong><br>
-            1. Выберите свое имя из списка<br>
-            2. Наведите камеру на QR-код преподавателя<br>
-            3. Дождитесь подтверждения
+        <div class="main-content">
+            <div class="info-box">
+                <h3>📋 Инструкция:</h3>
+                <ol>
+                    <li>Выберите свое имя из списка</li>
+                    <li>Наведите камеру на QR-код преподавателя</li>
+                    <li>Дождитесь подтверждения отметки</li>
+                </ol>
+            </div>
+            
+            <div class="form-group">
+                <label for="studentSelect">👤 Выберите себя:</label>
+                <select id="studentSelect">
+                    <option value="">-- Выберите студента --</option>
+                    <option value="1">Иван Петров (Группа 101)</option>
+                    <option value="2">Мария Сидорова (Группа 101)</option>
+                    <option value="3">Алексей Иванов (Группа 102)</option>
+                </select>
+            </div>
+            
+            <div id="reader"></div>
+            <div id="result"></div>
+            
+            <div class="buttons">
+                <button onclick="startScanner()" class="btn-primary" id="startBtn">
+                    🚀 Начать сканирование
+                </button>
+                <button onclick="window.location.href='/'" class="btn-secondary">
+                    ← На главную
+                </button>
+            </div>
         </div>
         
-        <div>
-            <label for="studentSelect" style="display: block; text-align: left; margin-bottom: 5px; font-weight: bold;">
-                Выберите себя:
-            </label>
-            <select id="studentSelect">
-                <option value="">-- Выберите студента --</option>
-                <option value="1">Иван Петров (Группа 101)</option>
-                <option value="2">Мария Сидорова (Группа 101)</option>
-                <option value="3">Алексей Иванов (Группа 102)</option>
-            </select>
-        </div>
-        
-        <div id="reader"></div>
-        <div id="result"></div>
-        
-        <button onclick="location.href='/'">← На главную</button>
+        <footer>
+            <p>Система контроля посещаемости | Для студентов</p>
+        </footer>
     </div>
-    
+
     <script>
-        const studentSelect = document.getElementById('studentSelect');
         let scanner = null;
+        let isScanning = false;
         
-        studentSelect.onchange = () => {
-            const studentId = studentSelect.value;
-            if (studentId && !scanner) {
-                startScanner();
-            }
-        };
-        
+        // Инициализация сканера
         function startScanner() {
-            document.getElementById('reader').innerHTML = '';
-            
-            scanner = new Html5QrcodeScanner('reader', {
-                qrbox: { width: 250, height: 250 },
-                fps: 10,
-                formatsToSupport: [0] // QR_CODE
-            });
-            
-            scanner.render(onScanSuccess);
-        }
-        
-        function onScanSuccess(decodedText) {
-            const studentId = studentSelect.value;
+            const studentId = document.getElementById('studentSelect').value;
             
             if (!studentId) {
-                showResult('❌ Сначала выберите свое имя!', 'error');
+                showResult('❌ Сначала выберите свое имя из списка!', 'error');
                 return;
             }
             
-            scanner.clear();
-            scanner = null;
+            if (isScanning) {
+                return;
+            }
             
-            // Извлекаем токен из URL
-            const tokenMatch = decodedText.match(/\/api\/mark\/([a-f0-9\-]+)/);
+            isScanning = true;
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('startBtn').innerHTML = '⏳ Сканирование...';
+            
+            // Очищаем предыдущий сканер
+            document.getElementById('reader').innerHTML = '';
+            
+            // Создаем новый сканер
+            scanner = new Html5QrcodeScanner('reader', {
+                qrbox: {
+                    width: 250,
+                    height: 250
+                },
+                fps: 10,
+                formatsToSupport: [0], // QR_CODE
+                showTorchButtonIfSupported: true,
+                showZoomSliderIfSupported: true
+            });
+            
+            // Настраиваем стили для сканера
+            setTimeout(() => {
+                const scanRegion = document.querySelector('#reader > div');
+                if (scanRegion) {
+                    scanRegion.style.borderRadius = '10px';
+                    scanRegion.style.overflow = 'hidden';
+                }
+            }, 100);
+            
+            // Запускаем сканирование
+            scanner.render(onScanSuccess, onScanError);
+        }
+        
+        // Обработка успешного сканирования
+        async function onScanSuccess(decodedText) {
+            const studentId = document.getElementById('studentSelect').value;
+            
+            // Останавливаем сканирование
+            if (scanner) {
+                scanner.clear();
+                scanner = null;
+            }
+            
+            isScanning = false;
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('startBtn').innerHTML = '🔄 Сканировать снова';
+            
+            // Извлекаем токен из QR-кода
+            const tokenMatch = decodedText.match(/\/api\/mark_attendance\/([a-f0-9\-]+)/);
             if (!tokenMatch) {
-                showResult('❌ Неверный QR-код', 'error');
-                setTimeout(() => { if (studentSelect.value) startScanner(); }, 2000);
+                showResult('❌ Неверный QR-код. Отсканируйте код с занятия.', 'error');
+                setTimeout(() => {
+                    if (studentId) startScanner();
+                }, 3000);
                 return;
             }
             
             const token = tokenMatch[1];
             
-            // Отправляем запрос на сервер
-            fetch(`/api/mark/${token}`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ student_id: studentId })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    showResult('✅ ' + data.message, 'success');
-                    studentSelect.disabled = true;
+            // Показываем загрузку
+            showResult('⏳ Отправка данных...', '');
+            
+            try {
+                // Отправляем запрос на сервер
+                const response = await fetch(`/api/mark_attendance/${token}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        student_id: studentId
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showResult('✅ ' + result.message, 'success');
+                    // Блокируем повторное сканирование
+                    document.getElementById('studentSelect').disabled = true;
+                    document.getElementById('startBtn').disabled = true;
+                    document.getElementById('startBtn').innerHTML = '✅ Посещаемость отмечена';
+                    
+                    // Автоматически возвращаем на главную через 5 секунд
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 5000);
                 } else {
-                    showResult('❌ ' + data.error, 'error');
-                    setTimeout(() => { if (studentSelect.value) startScanner(); }, 2000);
+                    showResult('❌ ' + result.error, 'error');
+                    // Разрешаем сканировать снова через 3 секунды
+                    setTimeout(() => {
+                        if (document.getElementById('studentSelect').value) {
+                            startScanner();
+                        }
+                    }, 3000);
                 }
-            })
-            .catch(err => {
-                showResult('❌ Ошибка соединения', 'error');
-                setTimeout(() => { if (studentSelect.value) startScanner(); }, 2000);
-            });
+            } catch (error) {
+                showResult('❌ Ошибка соединения с сервером', 'error');
+                console.error('Ошибка сети:', error);
+                
+                // Разрешаем сканировать снова через 3 секунды
+                setTimeout(() => {
+                    if (document.getElementById('studentSelect').value) {
+                        startScanner();
+                    }
+                }, 3000);
+            }
         }
         
-        function showResult(message, className) {
+        // Обработка ошибок сканирования
+        function onScanError(error) {
+            // Игнорируем обычные ошибки сканирования (пользователь еще не навел камеру)
+            console.debug('Ошибка сканирования (можно игнорировать):', error);
+        }
+        
+        // Показать результат
+        function showResult(message, type) {
             const resultDiv = document.getElementById('result');
             resultDiv.textContent = message;
-            resultDiv.className = className;
+            resultDiv.className = '';
+            
+            if (type === 'success') {
+                resultDiv.classList.add('success');
+            } else if (type === 'error') {
+                resultDiv.classList.add('error');
+            }
         }
+        
+        // Автоматически начать сканирование при выборе студента
+        document.getElementById('studentSelect').addEventListener('change', function() {
+            if (this.value && !isScanning) {
+                startScanner();
+            }
+        });
+        
+        // Предупреждение при закрытии страницы
+        window.addEventListener('beforeunload', function(e) {
+            if (isScanning) {
+                e.preventDefault();
+                e.returnValue = 'Вы сканируете QR-код. Закрыть страницу?';
+            }
+        });
+        
     </script>
 </body>
 </html>
