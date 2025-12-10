@@ -14,7 +14,7 @@
         }
         
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
             min-height: 100vh;
             display: flex;
             justify-content: center;
@@ -32,10 +32,28 @@
         }
         
         header {
-            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%);
             color: white;
             padding: 25px;
             text-align: center;
+        }
+        
+        .college-logo {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .college-name {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #ffd700;
+        }
+        
+        .college-full {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-bottom: 15px;
         }
         
         h1 {
@@ -54,14 +72,14 @@
         
         .info-box {
             background: #e8f4f8;
-            border: 2px solid #4CAF50;
+            border: 2px solid #2a5298;
             border-radius: 10px;
             padding: 20px;
             margin-bottom: 25px;
         }
         
         .info-box h3 {
-            color: #333;
+            color: #1e3c72;
             margin-bottom: 10px;
             display: flex;
             align-items: center;
@@ -85,7 +103,7 @@
             display: block;
             margin-bottom: 10px;
             font-weight: 600;
-            color: #333;
+            color: #1e3c72;
             font-size: 1.1rem;
         }
         
@@ -101,15 +119,15 @@
         }
         
         select:focus {
-            border-color: #4CAF50;
+            border-color: #2a5298;
             outline: none;
-            box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
+            box-shadow: 0 0 0 3px rgba(42, 82, 152, 0.2);
         }
         
         #reader {
             width: 100%;
             margin: 20px 0;
-            border: 2px dashed #4CAF50;
+            border: 2px dashed #2a5298;
             border-radius: 10px;
             padding: 20px;
             background: #f8f9fa;
@@ -172,23 +190,13 @@
         }
         
         .btn-primary {
-            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%);
             color: white;
         }
         
         .btn-primary:hover {
             transform: translateY(-3px);
-            box-shadow: 0 10px 25px rgba(76, 175, 80, 0.3);
-        }
-        
-        .btn-secondary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-        
-        .btn-secondary:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 10px 25px rgba(42, 82, 152, 0.3);
         }
         
         .btn:disabled {
@@ -203,7 +211,7 @@
             width: 20px;
             height: 20px;
             border: 3px solid #f3f3f3;
-            border-top: 3px solid #4CAF50;
+            border-top: 3px solid #2a5298;
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
@@ -219,6 +227,7 @@
             color: #666;
             border-top: 1px solid #eee;
             margin-top: 20px;
+            font-size: 0.9rem;
         }
         
         @media (max-width: 480px) {
@@ -229,28 +238,53 @@
             h1 {
                 font-size: 1.5rem;
             }
+            
+            .college-name {
+                font-size: 1rem;
+            }
+        }
+        
+        .student-info {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            border-left: 4px solid #2a5298;
+        }
+        
+        .student-info p {
+            margin: 5px 0;
+            color: #555;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>📱 Отметка посещаемости</h1>
-            <p class="subtitle">Используйте камеру телефона для сканирования QR-кода</p>
+            <div class="college-logo">🎓</div>
+            <div class="college-name">Финансово-экономический колледж</div>
+            <div class="college-full">РГЭУ (РИНХ)</div>
+            <h1>Отметка посещаемости</h1>
+            <p class="subtitle">Сканирование QR-кода для отметки присутствия</p>
         </header>
         
         <div class="main-content">
             <div class="info-box">
-                <h3>📋 Инструкция:</h3>
+                <h3>📋 Инструкция по отметке:</h3>
                 <ol>
-                    <li>Выберите свое имя из списка</li>
-                    <li>Наведите камеру на QR-код преподавателя</li>
+                    <li>Выберите свое имя из списка ниже</li>
+                    <li>Наведите камеру телефона на QR-код</li>
                     <li>Дождитесь подтверждения отметки</li>
                 </ol>
             </div>
             
+            <div class="student-info">
+                <p><strong>Внимание:</strong> Отметьтесь только один раз на каждом занятии</p>
+                <p><strong>Важно:</strong> Выберите правильно свое имя из списка</p>
+            </div>
+            
             <div class="form-group">
-                <label for="studentSelect">👤 Выберите себя:</label>
+                <label for="studentSelect">👤 Выберите себя из списка:</label>
                 <select id="studentSelect">
                     <option value="">-- Выберите студента --</option>
                     <option value="1">Иван Петров (Группа 101)</option>
@@ -260,7 +294,7 @@
             </div>
             
             <div id="reader">
-                <p style="color: #666; text-align: center;">
+                <p style="color: #666; text-align: center; padding: 40px;">
                     После выбора студента здесь появится область сканирования
                 </p>
             </div>
@@ -271,14 +305,12 @@
                 <button onclick="startScanner()" class="btn-primary" id="startBtn">
                     🚀 Начать сканирование
                 </button>
-                <button onclick="window.location.href='/'" class="btn-secondary">
-                    ← На главную
-                </button>
             </div>
         </div>
         
         <footer>
-            <p>Система контроля посещаемости | Для студентов</p>
+            <p>© Финансово-экономический колледж РГЭУ (РИНХ)</p>
+            <p>Система контроля посещаемости с QR-кодами</p>
         </footer>
     </div>
 
@@ -407,10 +439,11 @@
                     startBtn.disabled = true;
                     startBtn.innerHTML = '✅ Посещаемость отмечена';
                     
-                    // Автоматически возвращаем на главную через 5 секунд
+                    // Показываем сообщение об успехе на 10 секунд
                     setTimeout(() => {
-                        window.location.href = '/';
+                        showResult('✅ Вы отметились на занятии. Можете закрыть страницу.', 'success');
                     }, 5000);
+                    
                 } else {
                     showResult('❌ ' + result.error, 'error');
                     startBtn.disabled = false;
