@@ -272,42 +272,67 @@ def generate_qr(class_id):
 
 @app.route('/api/mark_attendance', methods=['POST'])
 def mark_attendance():
-    """Отметка посещаемости по токену из QR-кода - ИСПРАВЛЕННАЯ ВЕРСИЯ"""
+    """Отметка посещаемости - ИСПРАВЛЕННАЯ ВЕРСИЯ"""
     try:
-        data = request.json
+        # ПРОВЕРЯЕМ, ЧТО ПРИШЛИ ДАННЫЕ
+        if not request.is_json:
+            print("❌ Ошибка: Content-Type не application/json")
+            return jsonify({'success': False, 'error': 'Требуется JSON'}), 400
+            
+        data = request.get_json()
+        
         if not data:
+            print("❌ Ошибка: Нет данных в запросе")
             return jsonify({'success': False, 'error': 'Нет данных'}), 400
         
         token = data.get('token')
         student_id = data.get('student_id')
         
-        print(f"📱 Получен запрос на отметку: token={token}, student={student_id}")
+        print(f"📱 Получен запрос на отметку: token={token}, student_id={student_id}")
+        print(f"📱 Тип student_id: {type(student_id)}, значение: {student_id}")
         
-        if not token or not student_id:
-            return jsonify({'success': False, 'error': 'Недостаточно данных'}), 400
+        if not token:
+            print("❌ Ошибка: Нет токена")
+            return jsonify({'success': False, 'error': 'Нет токена'}), 400
+        
+        if not student_id:
+            print("❌ Ошибка: Нет student_id")
+            return jsonify({'success': False, 'error': 'Выберите студента'}), 400
+        
+        # Преобразуем student_id в int
+        try:
+            student_id = int(student_id)
+        except ValueError:
+            print(f"❌ Ошибка: student_id не число: {student_id}")
+            return jsonify({'success': False, 'error': 'Неверный ID студента'}), 400
         
         conn = get_db()
         c = conn.cursor()
         
-        # Находим занятие по токену
-        c.execute("SELECT id FROM classes WHERE qr_token = ?", (token,))
+        # НАХОДИМ ЗАНЯТИЕ ПО ТОКЕНУ
+        c.execute("SELECT id, subject FROM classes WHERE qr_token = ?", (token,))
         class_data = c.fetchone()
         
         if not class_data:
             conn.close()
+            print(f"❌ Токен не найден: {token}")
             return jsonify({'success': False, 'error': 'Неверный QR-код'}), 404
         
         class_id = class_data['id']
+        subject = class_data['subject']
         
-        # Проверяем, не отметился ли уже студент
+        print(f"✅ Найдено занятие: {subject} (ID: {class_id})")
+        
+        # ПРОВЕРЯЕМ, НЕ ОТМЕТИЛСЯ ЛИ УЖЕ
         c.execute("SELECT * FROM attendance WHERE student_id = ? AND class_id = ?",
                   (student_id, class_id))
         
         if c.fetchone():
             conn.close()
+            print(f"⚠️ Студент {student_id} уже отметился на занятии {class_id}")
             return jsonify({'success': False, 'error': 'Вы уже отметились'}), 400
         
-        # Добавляем запись о посещаемости
+        # ДОБАВЛЯЕМ ЗАПИСЬ
         scan_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         c.execute(
             "INSERT INTO attendance (student_id, class_id, status, scan_time) VALUES (?, ?, 'present', ?)",
@@ -316,22 +341,27 @@ def mark_attendance():
         
         conn.commit()
         
-        # Получаем имя студента для логов
+        # ПОЛУЧАЕМ ИМЯ СТУДЕНТА
         c.execute("SELECT name FROM students WHERE id = ?", (student_id,))
-        student_name = c.fetchone()['name']
+        student_row = c.fetchone()
+        student_name = student_row['name'] if student_row else f"Студент {student_id}"
         
         conn.close()
         
-        print(f"✅ Отмечена посещаемость: {student_name} (ID: {student_id}), занятие ID: {class_id}")
+        print(f"✅ УСПЕХ: {student_name} отметился на {subject}")
         
         return jsonify({
             'success': True,
-            'message': f'Посещаемость успешно отмечена для {student_name}!'
+            'message': f'Посещаемость отмечена для {student_name}!',
+            'student_name': student_name,
+            'class_subject': subject
         })
         
     except Exception as e:
-        print(f"❌ Ошибка отметки посещаемости: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        print(f"❌ КРИТИЧЕСКАЯ ОШИБКА: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': f'Внутренняя ошибка: {str(e)}'}), 500
 
 # ================== УПРАВЛЕНИЕ ПОСЕЩАЕМОСТЬЮ ==================
 
