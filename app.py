@@ -118,10 +118,19 @@ def index():
 @app.route('/scan')
 def scan():
     """Страница сканирования для студентов"""
+    # Получаем токен из URL
+    token = request.args.get('token')
+    
     # Можно добавить логику для определения мобильного устройства
     user_agent = request.headers.get('User-Agent', '').lower()
     is_mobile = any(word in user_agent for word in ['mobile', 'android', 'iphone'])
-    return render_template('scan.html', is_mobile=is_mobile)
+    
+    if token:
+        # Если есть токен, показываем страницу для отметки
+        return render_template('scan.html', is_mobile=is_mobile, token=token)
+    else:
+        # Если нет токена, показываем инструкцию
+        return render_template('scan.html', is_mobile=is_mobile, token=None)
 
 # ================== API ДЛЯ ЗАНЯТИЙ ==================
 
@@ -268,42 +277,79 @@ def generate_qr(class_id):
         print(f"❌ Ошибка генерации QR-кода: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/test_mark', methods=['GET', 'POST'])
-def test_mark():
-    """Тестовый эндпоинт для проверки отметки"""
-    if request.method == 'GET':
-        # Показываем форму для тестирования
-        return '''
-        <h1>Тест отметки посещаемости</h1>
-        <form method="POST">
-            Токен: <input name="token" value=""><br>
-            Student ID: <input name="student_id" value="1"><br>
-            <button type="submit">Тест</button>
-        </form>
-        '''
-    else:
-        # Эмулируем запрос от QR-сканера
-        token = request.form.get('token')
-        student_id = request.form.get('student_id')
+# ================== ОБРАБОТКА ОТМЕТКИ ПОСЕЩАЕМОСТИ ==================
+
+@app.route('/api/mark_attendance', methods=['POST'])
+def mark_attendance():
+    """Обработка отметки посещаемости по QR-коду"""
+    try:
+        data = request.json
+        token = data.get('token')
+        student_id = data.get('student_id')
         
-        # Проверяем в БД
+        if not token or not student_id:
+            return jsonify({'success': False, 'error': 'Отсутствует токен или ID студента'})
+        
         conn = get_db()
         c = conn.cursor()
         
+        # Проверяем существование токена
         c.execute("SELECT * FROM classes WHERE qr_token = ?", (token,))
         class_data = c.fetchone()
         
+        if not class_data:
+            conn.close()
+            return jsonify({'success': False, 'error': 'Неверный QR-код или занятие не найдено'})
+        
+        # Проверяем существование студента
         c.execute("SELECT * FROM students WHERE id = ?", (student_id,))
         student_data = c.fetchone()
         
+        if not student_data:
+            conn.close()
+            return jsonify({'success': False, 'error': 'Студент не найден'})
+        
+        class_id = class_data['id']
+        scan_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        
+        # Проверяем, была ли уже отметка
+        c.execute('''SELECT status FROM attendance 
+                     WHERE student_id = ? AND class_id = ?''', 
+                  (student_id, class_id))
+        existing = c.fetchone()
+        
+        if existing:
+            # Обновляем существующую запись
+            c.execute('''UPDATE attendance 
+                         SET status = 'present', scan_time = ?
+                         WHERE student_id = ? AND class_id = ?''',
+                      (scan_time, student_id, class_id))
+            message = 'Статус обновлен на "присутствовал"'
+        else:
+            # Создаем новую запись
+            c.execute('''INSERT INTO attendance 
+                         (student_id, class_id, status, scan_time)
+                         VALUES (?, ?, 'present', ?)''',
+                      (student_id, class_id, scan_time))
+            message = 'Отметка о присутствии сохранена'
+        
+        conn.commit()
         conn.close()
         
         return jsonify({
-            'token_exists': bool(class_data),
-            'student_exists': bool(student_data),
-            'class_info': dict(class_data) if class_data else None,
-            'student_info': dict(student_data) if student_data else None
+            'success': True,
+            'message': message,
+            'student': dict(student_data),
+            'class': {
+                'subject': class_data['subject'],
+                'date_time': class_data['date_time']
+            },
+            'scan_time': scan_time
         })
+        
+    except Exception as e:
+        print(f"❌ Ошибка при отметке посещаемости: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 # ================== УПРАВЛЕНИЕ ПОСЕЩАЕМОСТЬЮ ==================
 
@@ -537,4 +583,4 @@ if __name__ == '__main__':
     print(f"📁 Путь к БД: {DB_PATH}")
     print(f"🌐 Порт: {port}")
     print(f"⚙️ Режим: {'PRODUCTION' if 'RENDER' in os.environ else 'DEVELOPMENT'}")
-    app.run(host='0.0.0.0', port=port, debug=True)
+    app.run(host='0.0.0.0', port=port, debug=False)  # debug=False для продакшена
