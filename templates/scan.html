@@ -166,7 +166,6 @@
             font-weight: 600;
             text-align: center;
             font-size: 1.1rem;
-            display: none;
             animation: fadeIn 0.5s;
         }
         
@@ -313,7 +312,6 @@
             border-radius: 8px;
             padding: 10px;
             margin-bottom: 15px;
-            display: none;
         }
         
         .selected-student.show {
@@ -332,6 +330,21 @@
             text-align: center;
             margin-top: 10px;
         }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        .debug-info {
+            background: #f8f9fa;
+            border: 1px dashed #6c757d;
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 0.8rem;
+            color: #666;
+            word-break: break-all;
+        }
     </style>
 </head>
 <body>
@@ -345,6 +358,18 @@
         </header>
         
         <div class="main-content">
+            <!-- Простой режим для тестирования -->
+            <div class="info-box" id="manualMode" style="display: none;">
+                <h3>⚙️ Ручной режим (для тестирования):</h3>
+                <div style="margin-top: 10px;">
+                    <input type="text" id="manualToken" placeholder="Вставьте токен из QR-кода" 
+                           style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 10px;">
+                    <button onclick="manualSubmit()" style="width: 100%; padding: 10px; background: #28a745; color: white; border: none; border-radius: 5px;">
+                        ✅ Отправить вручную
+                    </button>
+                </div>
+            </div>
+            
             <div class="auto-scan-notice">
                 <strong>⚠️ Автоматическое сканирование</strong><br>
                 Камера запустится автоматически после выбора имени
@@ -369,7 +394,7 @@
                 </select>
             </div>
             
-            <div id="selectedStudentInfo" class="selected-student">
+            <div id="selectedStudentInfo" class="selected-student hidden">
                 <div id="studentNameDisplay" style="font-weight: 600; color: #1e3c72;"></div>
                 <div style="font-size: 0.9rem; color: #666; margin-top: 5px;">
                     Готово к сканированию...
@@ -383,16 +408,33 @@
             </div>
             
             <div id="reader">
-                <div class="scanner-label" style="display: none;">СКАНИРОВАНИЕ</div>
+                <div class="scanner-label hidden">СКАНИРОВАНИЕ</div>
                 <p style="color: #666; text-align: center; padding: 40px;">
                     Выберите свое имя для активации сканера
                 </p>
             </div>
             
-            <div id="result"></div>
+            <div id="result" class="hidden"></div>
             
-            <div class="countdown" id="countdown" style="display: none;">
+            <div class="debug-info hidden" id="debugInfo">
+                <strong>Отладочная информация:</strong><br>
+                <div id="debugContent"></div>
+            </div>
+            
+            <div class="countdown hidden" id="countdown">
                 Автоматическое закрытие через: <span id="countdownTimer">5</span> сек.
+            </div>
+            
+            <div style="text-align: center; margin-top: 15px;">
+                <button onclick="toggleDebug()" style="padding: 5px 10px; background: #6c757d; color: white; border: none; border-radius: 5px; font-size: 0.8rem;">
+                    🐛 Отладка
+                </button>
+                <button onclick="toggleManualMode()" style="padding: 5px 10px; background: #17a2b8; color: white; border: none; border-radius: 5px; font-size: 0.8rem; margin-left: 10px;">
+                    ⚙️ Ручной режим
+                </button>
+                <button onclick="testConnection()" style="padding: 5px 10px; background: #ffc107; color: black; border: none; border-radius: 5px; font-size: 0.8rem; margin-left: 10px;">
+                    🔗 Тест сервера
+                </button>
             </div>
         </div>
         
@@ -407,12 +449,13 @@
         let isScanning = false;
         let currentStudentId = null;
         let countdownInterval = null;
+        let debugMode = false;
         
         // Объект с именами студентов
         const students = {
-            '1': 'Иван Петров (Группа 101)',
-            '2': 'Мария Сидорова (Группа 101)',
-            '3': 'Алексей Иванов (Группа 102)'
+            '1': { name: 'Иван Петров', group: 'Группа 101' },
+            '2': { name: 'Мария Сидорова', group: 'Группа 101' },
+            '3': { name: 'Алексей Иванов', group: 'Группа 102' }
         };
         
         // Инициализация сканера при выборе студента
@@ -420,12 +463,16 @@
             currentStudentId = this.value;
             
             if (currentStudentId) {
+                // Сохраняем выбор в localStorage
+                localStorage.setItem('lastStudent', currentStudentId);
+                
                 // Показываем выбранного студента
                 const studentInfo = document.getElementById('selectedStudentInfo');
                 const studentNameDisplay = document.getElementById('studentNameDisplay');
                 
-                studentNameDisplay.textContent = students[currentStudentId];
-                studentInfo.classList.add('show');
+                const student = students[currentStudentId];
+                studentNameDisplay.textContent = `${student.name} (${student.group})`;
+                studentInfo.classList.remove('hidden');
                 
                 // Обновляем статус
                 updateScanStatus('scanning', '🔍 Сканирование активно');
@@ -439,7 +486,7 @@
                 this.disabled = true;
             } else {
                 // Скрываем информацию о студенте
-                document.getElementById('selectedStudentInfo').classList.remove('show');
+                document.getElementById('selectedStudentInfo').classList.add('hidden');
                 updateScanStatus('waiting', '⏳ Ожидание выбора студента');
                 
                 // Останавливаем сканер, если он запущен
@@ -465,22 +512,22 @@
                 case 'waiting':
                     statusElement.classList.add('status-waiting');
                     reader.classList.remove('scanner-active');
-                    scannerLabel.style.display = 'none';
+                    if (scannerLabel) scannerLabel.classList.add('hidden');
                     break;
                 case 'scanning':
                     statusElement.classList.add('status-scanning');
                     reader.classList.add('scanner-active');
-                    scannerLabel.style.display = 'block';
+                    if (scannerLabel) scannerLabel.classList.remove('hidden');
                     break;
                 case 'success':
                     statusElement.classList.add('status-success');
                     reader.classList.remove('scanner-active');
-                    scannerLabel.style.display = 'none';
+                    if (scannerLabel) scannerLabel.classList.add('hidden');
                     break;
                 case 'error':
                     statusElement.classList.add('status-error');
                     reader.classList.remove('scanner-active');
-                    scannerLabel.style.display = 'none';
+                    if (scannerLabel) scannerLabel.classList.add('hidden');
                     break;
             }
             
@@ -496,7 +543,8 @@
             isScanning = true;
             
             // Очищаем предыдущий сканер
-            document.getElementById('reader').innerHTML = `
+            const reader = document.getElementById('reader');
+            reader.innerHTML = `
                 <div class="scanner-label">СКАНИРОВАНИЕ</div>
                 <div style="display: flex; justify-content: center; align-items: center; height: 250px;">
                     <div style="text-align: center;">
@@ -506,94 +554,146 @@
                 </div>
             `;
             
-            // Создаем новый сканер
-            scanner = new Html5QrcodeScanner('reader', {
-                qrbox: {
-                    width: 250,
-                    height: 250
+            try {
+                // Создаем новый сканер
+                scanner = new Html5QrcodeScanner('reader', {
+                    qrbox: {
+                        width: 250,
+                        height: 250
+                    },
+                    fps: 20,
+                    formatsToSupport: [0],
+                    showTorchButtonIfSupported: true,
+                    showZoomSliderIfSupported: true,
+                    rememberLastUsedCamera: true,
+                    supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
+                }, false);
+                
+                // Настраиваем сканер для максимальной производительности
+                const qrCodeSuccessCallback = (decodedText) => {
+                    console.log('Отсканировано:', decodedText);
+                    addDebugInfo(`📱 Отсканировано: ${decodedText}`);
+                    
+                    // Останавливаем сканирование сразу после успеха
+                    if (scanner && isScanning) {
+                        scanner.clear().then(() => {
+                            scanner = null;
+                            isScanning = false;
+                            processScannedCode(decodedText);
+                        }).catch(err => {
+                            console.error("Ошибка при остановке сканера:", err);
+                            addDebugInfo(`❌ Ошибка остановки сканера: ${err}`);
+                            scanner = null;
+                            isScanning = false;
+                            processScannedCode(decodedText);
+                        });
+                    } else {
+                        processScannedCode(decodedText);
+                    }
+                };
+                
+                const qrCodeErrorCallback = (error) => {
+                    // Игнорируем большинство ошибок сканирования
+                    if (!error.includes('NotFoundException')) {
+                        console.debug('Ошибка сканирования:', error);
+                        if (debugMode) {
+                            addDebugInfo(`⚠️ Ошибка сканирования: ${error}`);
+                        }
+                    }
+                };
+                
+                // Запускаем сканирование
+                scanner.render(qrCodeSuccessCallback, qrCodeErrorCallback);
+                
+                // Обновляем статус
+                updateScanStatus('scanning', '🔍 Наведите камеру на QR-код');
+                
+            } catch (error) {
+                console.error('Ошибка создания сканера:', error);
+                addDebugInfo(`❌ Ошибка создания сканера: ${error}`);
+                
+                showResult('❌ Ошибка запуска камеры. Проверьте разрешения.', 'error');
+                updateScanStatus('error', '❌ Ошибка камеры');
+                
+                // Разблокируем выбор студента
+                document.getElementById('studentSelect').disabled = false;
+                isScanning = false;
+            }
+        }
+        
+        // Извлечение токена из QR-кода
+        function extractTokenFromQR(qrData) {
+            let token = null;
+            
+            // Пробуем разные форматы QR-кодов
+            const patterns = [
+                // Формат 1: URL с параметром token
+                () => {
+                    try {
+                        const url = new URL(qrData);
+                        return url.searchParams.get('token');
+                    } catch (e) {
+                        return null;
+                    }
                 },
-                fps: 20, // Увеличиваем FPS для более быстрого сканирования
-                formatsToSupport: [0],
-                showTorchButtonIfSupported: true,
-                showZoomSliderIfSupported: true,
-                rememberLastUsedCamera: true,
-                supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
-            }, false); // verbose = false
-            
-            // Настраиваем сканер для максимальной производительности
-            const qrCodeSuccessCallback = (decodedText) => {
-                // Останавливаем сканирование сразу после успеха
-                if (scanner && isScanning) {
-                    scanner.clear().then(() => {
-                        scanner = null;
-                        isScanning = false;
-                        processScannedCode(decodedText);
-                    }).catch(err => {
-                        console.error("Ошибка при остановке сканера:", err);
-                        scanner = null;
-                        isScanning = false;
-                        processScannedCode(decodedText);
-                    });
-                } else {
-                    processScannedCode(decodedText);
+                
+                // Формат 2: Прямой UUID
+                () => {
+                    const uuidRegex = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+                    const match = qrData.match(uuidRegex);
+                    return match ? match[0] : null;
+                },
+                
+                // Формат 3: Только UUID (36 символов)
+                () => {
+                    if (qrData.length === 36) {
+                        const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+                        return uuidPattern.test(qrData) ? qrData : null;
+                    }
+                    return null;
+                },
+                
+                // Формат 4: Различные вариации URL
+                () => {
+                    // Проверяем, содержит ли QR-код scan?token=
+                    const tokenMatch = qrData.match(/scan\?token=([^&]+)/i);
+                    if (tokenMatch) return tokenMatch[1];
+                    
+                    // Проверяем token= параметр в любом месте
+                    const tokenMatch2 = qrData.match(/token=([^&\s]+)/i);
+                    if (tokenMatch2) return tokenMatch2[1];
+                    
+                    return null;
                 }
-            };
+            ];
             
-            const qrCodeErrorCallback = (error) => {
-                // Игнорируем большинство ошибок сканирования
-                if (!error.includes('NotFoundException')) {
-                    console.debug('Ошибка сканирования (можно игнорировать):', error);
+            // Пробуем все паттерны
+            for (const pattern of patterns) {
+                token = pattern();
+                if (token) {
+                    console.log('Найден токен:', token);
+                    addDebugInfo(`✅ Извлечен токен: ${token}`);
+                    return token;
                 }
-            };
+            }
             
-            // Запускаем сканирование
-            scanner.render(qrCodeSuccessCallback, qrCodeErrorCallback);
-            
-            // Обновляем статус
-            updateScanStatus('scanning', '🔍 Наведите камеру на QR-код');
+            console.log('Токен не найден в:', qrData);
+            addDebugInfo(`❌ Токен не найден в QR-коде`);
+            return null;
         }
         
         // Обработка отсканированного кода
         async function processScannedCode(decodedText) {
-            // Извлекаем токен из QR-кода
-            let token = null;
-            
-            // Формат 1: URL с параметром token
-            try {
-                const url = new URL(decodedText);
-                token = url.searchParams.get('token');
-            } catch (e) {
-                // Не URL, пробуем другой формат
-            }
-            
-            // Формат 2: Прямой токен (UUID)
-            if (!token) {
-                const uuidRegex = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
-                const match = decodedText.match(uuidRegex);
-                if (match) {
-                    token = match[0];
-                }
-            }
-            
-            // Формат 3: QR-код содержит только токен
-            if (!token && decodedText.length === 36) {
-                // Проверяем, является ли это UUID
-                const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-                if (uuidPattern.test(decodedText)) {
-                    token = decodedText;
-                }
-            }
+            // Извлекаем токен
+            const token = extractTokenFromQR(decodedText);
             
             if (!token) {
                 showResult('❌ Неверный QR-код. Отсканируйте код с занятия.', 'error');
                 updateScanStatus('error', '❌ Ошибка: неверный QR-код');
                 
-                // Перезапускаем сканер через 2 секунды
-                setTimeout(() => {
-                    if (currentStudentId) {
-                        startScanner();
-                    }
-                }, 2000);
+                // Разблокируем выбор студента
+                document.getElementById('studentSelect').disabled = false;
+                
                 return;
             }
             
@@ -602,6 +702,17 @@
             updateScanStatus('scanning', '⏳ Обработка данных...');
             
             try {
+                addDebugInfo(`📤 Отправка запроса: token=${token}, student_id=${currentStudentId}`);
+                
+                // Проверяем, существует ли эндпоинт
+                const testResponse = await fetch('/api/test_mark', {
+                    method: 'GET'
+                });
+                
+                if (!testResponse.ok) {
+                    throw new Error(`Тестовый эндпоинт недоступен: ${testResponse.status}`);
+                }
+                
                 // Отправляем запрос на сервер
                 const response = await fetch('/api/mark_attendance', {
                     method: 'POST',
@@ -610,40 +721,48 @@
                     },
                     body: JSON.stringify({
                         token: token,
-                        student_id: currentStudentId
+                        student_id: parseInt(currentStudentId)
                     })
                 });
                 
+                addDebugInfo(`📥 Ответ сервера: статус ${response.status}`);
+                
                 const result = await response.json();
+                console.log('Ответ сервера:', result);
+                addDebugInfo(`📥 Данные ответа: ${JSON.stringify(result)}`);
                 
                 if (result.success) {
-                    showResult('✅ ' + result.message, 'success');
+                    showResult(`✅ ${result.message}`, 'success');
                     updateScanStatus('success', '✅ Посещаемость отмечена!');
                     
                     // Запускаем обратный отсчет
                     startCountdown();
                     
                 } else {
-                    showResult('❌ ' + result.error, 'error');
+                    showResult(`❌ ${result.error}`, 'error');
                     updateScanStatus('error', '❌ Ошибка: ' + result.error);
                     
-                    // Перезапускаем сканер через 3 секунды
+                    // Разблокируем выбор студента для повторной попытки
                     setTimeout(() => {
-                        if (currentStudentId) {
-                            startScanner();
-                        }
+                        document.getElementById('studentSelect').disabled = false;
+                        document.getElementById('studentSelect').value = '';
+                        document.getElementById('selectedStudentInfo').classList.add('hidden');
+                        updateScanStatus('waiting', '⏳ Ожидание выбора студента');
                     }, 3000);
                 }
             } catch (error) {
                 console.error('Ошибка сети:', error);
+                addDebugInfo(`❌ Ошибка сети: ${error.message}`);
+                
                 showResult('❌ Ошибка соединения с сервером', 'error');
                 updateScanStatus('error', '❌ Ошибка сети');
                 
-                // Перезапускаем сканер через 3 секунды
+                // Разблокируем выбор студента
                 setTimeout(() => {
-                    if (currentStudentId) {
-                        startScanner();
-                    }
+                    document.getElementById('studentSelect').disabled = false;
+                    document.getElementById('studentSelect').value = '';
+                    document.getElementById('selectedStudentInfo').classList.add('hidden');
+                    updateScanStatus('waiting', '⏳ Ожидание выбора студента');
                 }, 3000);
             }
         }
@@ -654,7 +773,7 @@
             const countdownElement = document.getElementById('countdown');
             const timerElement = document.getElementById('countdownTimer');
             
-            countdownElement.style.display = 'block';
+            countdownElement.classList.remove('hidden');
             timerElement.textContent = seconds;
             
             if (countdownInterval) {
@@ -678,19 +797,74 @@
             const resultDiv = document.getElementById('result');
             resultDiv.textContent = message;
             resultDiv.className = type;
+            resultDiv.classList.remove('hidden');
         }
         
-        // Предупреждение при закрытии страницы
-        window.addEventListener('beforeunload', function(e) {
-            if (isScanning) {
-                e.preventDefault();
-                e.returnValue = 'Вы сканируете QR-код. Закрыть страницу?';
+        // Ручная отправка
+        function manualSubmit() {
+            const token = document.getElementById('manualToken').value.trim();
+            if (!token) {
+                alert('Введите токен');
+                return;
             }
-        });
+            
+            const studentId = document.getElementById('studentSelect').value;
+            if (!studentId) {
+                alert('Выберите студента');
+                return;
+            }
+            
+            currentStudentId = studentId;
+            processScannedCode(`scan?token=${token}`);
+        }
         
-        // Автоматический запуск камеры при загрузке, если есть разрешение
+        // Переключение ручного режима
+        function toggleManualMode() {
+            const manualDiv = document.getElementById('manualMode');
+            if (manualDiv.style.display === 'none') {
+                manualDiv.style.display = 'block';
+            } else {
+                manualDiv.style.display = 'none';
+            }
+        }
+        
+        // Переключение отладки
+        function toggleDebug() {
+            debugMode = !debugMode;
+            const debugDiv = document.getElementById('debugInfo');
+            if (debugMode) {
+                debugDiv.classList.remove('hidden');
+            } else {
+                debugDiv.classList.add('hidden');
+            }
+        }
+        
+        // Добавить информацию для отладки
+        function addDebugInfo(message) {
+            if (!debugMode) return;
+            
+            const debugContent = document.getElementById('debugContent');
+            const timestamp = new Date().toLocaleTimeString();
+            debugContent.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+            debugContent.scrollTop = debugContent.scrollHeight;
+        }
+        
+        // Тест соединения с сервером
+        async function testConnection() {
+            try {
+                addDebugInfo('🔗 Тестирование соединения с сервером...');
+                const response = await fetch('/health');
+                const result = await response.json();
+                addDebugInfo(`✅ Сервер доступен: ${result.status}, БД: ${result.database}`);
+                alert(`Сервер: ${result.status}\nБД: ${result.database}`);
+            } catch (error) {
+                addDebugInfo(`❌ Ошибка соединения: ${error.message}`);
+                alert('❌ Сервер недоступен');
+            }
+        }
+        
+        // Автоматический запуск при загрузке, если есть сохраненный студент
         window.addEventListener('load', function() {
-            // Проверяем, есть ли сохраненный выбор студента
             const savedStudent = localStorage.getItem('lastStudent');
             if (savedStudent && students[savedStudent]) {
                 document.getElementById('studentSelect').value = savedStudent;
