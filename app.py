@@ -5,21 +5,21 @@ import qrcode
 import io
 import csv
 from datetime import datetime
-from flask import Flask, render_template, request, jsonify, send_file, send_from_directory
+from flask import Flask, render_template, request, jsonify, send_file
 
 app = Flask(__name__)
 
-# ================== НАСТРОЙКИ БАЗЫ ДАННЫХ ==================
+# ================== БАЗА ДАННЫХ ==================
 
 def init_db():
     """Инициализация базы данных"""
     # На Render используем /tmp папку, локально - текущую папку
     if 'RENDER' in os.environ:
         db_path = '/tmp/attendance.db'
+        print("🔧 Используем БД на Render:", db_path)
     else:
         db_path = 'attendance.db'
-    
-    print(f"🔄 Инициализация БД по пути: {db_path}")
+        print("🔧 Используем локальную БД:", db_path)
     
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
@@ -54,7 +54,7 @@ def init_db():
             (3, 'Алексей Иванов', 'Группа 102')
         ]
         c.executemany("INSERT INTO students VALUES (?, ?, ?)", students)
-        print("✅ Тестовые студенты добавлены")
+        print("✅ Добавлены 3 тестовых студента")
     
     conn.commit()
     conn.close()
@@ -159,6 +159,33 @@ def create_class():
         print(f"❌ Ошибка при создании занятия: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/api/delete_class/<int:class_id>', methods=['DELETE'])
+def delete_class(class_id):
+    """Удаление занятия"""
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        
+        # Сначала удаляем связанную посещаемость
+        c.execute("DELETE FROM attendance WHERE class_id = ?", (class_id,))
+        
+        # Затем удаляем само занятие
+        c.execute("DELETE FROM classes WHERE id = ?", (class_id,))
+        
+        conn.commit()
+        conn.close()
+        
+        print(f"🗑️ Удалено занятие ID: {class_id}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Занятие успешно удалено'
+        })
+        
+    except Exception as e:
+        print(f"❌ Ошибка удаления занятия: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/api/get_classes')
 def get_classes():
     """Получение списка всех занятий"""
@@ -186,19 +213,31 @@ def generate_qr(class_id):
         class_data = c.fetchone()
         
         if not class_data:
-            return "Занятие не найдено", 404
+            return jsonify({'error': 'Занятие не найдено'}), 404
         
         # Получаем токен занятия
         qr_token = class_data['qr_token']
         
-        # Создаем ссылку для отметки посещаемости
-        base_url = request.host_url.rstrip('/')
-        qr_data = f"{base_url}/api/mark_attendance/{qr_token}"
+        # Создаем правильную ссылку для отметки
+        # На Render используем абсолютный URL
+        if 'RENDER' in os.environ:
+            # Получаем URL из запроса или используем дефолтный
+            base_url = request.host_url.rstrip('/')
+            # Если это localhost, заменяем на реальный URL Render
+            if 'localhost' in base_url or '127.0.0.1' in base_url:
+                base_url = 'https://attendance-system-rbif.onrender.com'
+        else:
+            base_url = request.host_url.rstrip('/')
+        
+        # Создаем URL для сканирования с токеном
+        qr_data = f"{base_url}/scan?token={qr_token}"
+        
+        print(f"🔗 Генерация QR-кода: {qr_data}")
         
         # Генерируем QR-код
         qr = qrcode.QRCode(
             version=1,
-            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            error_correction=qrcode.constants.ERROR_CORRECT_H,
             box_size=10,
             border=4,
         )
@@ -214,25 +253,30 @@ def generate_qr(class_id):
         
         conn.close()
         
-        print(f"✅ Сгенерирован QR-код для занятия ID: {class_id}")
+        print(f"✅ QR-код сгенерирован для занятия ID: {class_id}")
         
-        return send_file(img_buffer, mimetype='image/png')
+        return send_file(
+            img_buffer,
+            mimetype='image/png',
+            as_attachment=False
+        )
         
     except Exception as e:
         print(f"❌ Ошибка генерации QR-кода: {str(e)}")
-        return f"Ошибка: {str(e)}", 500
+        return jsonify({'error': str(e)}), 500
 
 # ================== ОТМЕТКА ПОСЕЩАЕМОСТИ ==================
 
-@app.route('/api/mark_attendance/<token>', methods=['POST'])
-def mark_attendance(token):
-    """Отметка посещаемости по токену из QR-кода"""
+@app.route('/api/mark_attendance', methods=['POST'])
+def mark_attendance():
+    """Отметка посещаемости по токену"""
     try:
         data = request.json
+        token = data.get('token')
         student_id = data.get('student_id')
         
-        if not student_id:
-            return jsonify({'success': False, 'error': 'Выберите студента'})
+        if not token or not student_id:
+            return jsonify({'success': False, 'error': 'Недостаточно данных'})
         
         conn = get_db()
         c = conn.cursor()
@@ -334,57 +378,77 @@ def update_status():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
-# ================== ЭКСПОРТ ДАННЫХ ==================
+# ================== ЭКСПОРТ В EXCEL (CSV) ==================
 
 @app.route('/api/export_csv/<int:class_id>')
 def export_csv(class_id):
-    """Экспорт посещаемости в CSV"""
+    """Экспорт посещаемости в CSV с русскими статусами"""
     try:
         conn = get_db()
         c = conn.cursor()
         
-        c.execute('''SELECT c.subject, c.date_time, s.name, s.group_name, 
-                            COALESCE(a.status, 'absent') as status
-                     FROM classes c, students s
-                     LEFT JOIN attendance a ON s.id = a.student_id AND a.class_id = c.id
-                     WHERE c.id = ?''', (class_id,))
+        # Получаем данные занятия
+        c.execute("SELECT subject, date_time FROM classes WHERE id = ?", (class_id,))
+        class_info = c.fetchone()
         
-        data = c.fetchall()
+        if not class_info:
+            return "Занятие не найдено", 404
+        
+        # Получаем посещаемость
+        c.execute('''SELECT s.name, s.group_name, 
+                            COALESCE(a.status, 'absent') as status
+                     FROM students s
+                     LEFT JOIN attendance a ON s.id = a.student_id AND a.class_id = ?
+                     ORDER BY s.group_name, s.name''', (class_id,))
+        
+        attendance = c.fetchall()
         conn.close()
         
-        # Создаем CSV в памяти
+        # Создаем CSV в памяти с BOM для русского Excel
         output = io.StringIO()
-        writer = csv.writer(output)
-        writer.writerow(['Предмет', 'Дата и время', 'Студент', 'Группа', 'Статус'])
         
-        for row in data:
+        # Используем точку с запятой как разделитель (лучше для русского Excel)
+        writer = csv.writer(output, delimiter=';')
+        
+        # Заголовки на русском
+        writer.writerow(['Предмет', class_info['subject']])
+        writer.writerow(['Дата проведения', class_info['date_time']])
+        writer.writerow([])  # Пустая строка
+        writer.writerow(['Студент', 'Группа', 'Статус посещаемости'])
+        
+        for row in attendance:
+            # Преобразуем статус на русский
+            status_ru = {
+                'present': 'Присутствовал',
+                'absent': 'Отсутствовал', 
+                'late': 'Опоздал'
+            }.get(row['status'], row['status'])
+            
             writer.writerow([
-                row['subject'],
-                row['date_time'],
                 row['name'],
                 row['group_name'],
-                row['status']
+                status_ru
             ])
         
         output.seek(0)
         
-        # Отправляем файл
+        # Кодируем в UTF-8 с BOM для Excel
+        csv_data = output.getvalue().encode('utf-8-sig')
+        
+        # Создаем имя файла с датой
+        date_str = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f'посещаемость_{class_info["subject"]}_{date_str}.csv'
+        
         return send_file(
-            io.BytesIO(output.getvalue().encode('utf-8-sig')),
-            mimetype='text/csv',
+            io.BytesIO(csv_data),
+            mimetype='text/csv; charset=utf-8-sig',
             as_attachment=True,
-            download_name=f'посещаемость_{class_id}.csv'
+            download_name=filename
         )
         
     except Exception as e:
+        print(f"❌ Ошибка экспорта: {str(e)}")
         return f"Ошибка экспорта: {str(e)}", 500
-
-# ================== СТАТИЧЕСКИЕ ФАЙЛЫ ==================
-
-@app.route('/static/<path:filename>')
-def serve_static(filename):
-    """Обслуживание статических файлов"""
-    return send_from_directory('static', filename)
 
 # ================== СИСТЕМНЫЕ МАРШРУТЫ ==================
 
@@ -405,28 +469,48 @@ def health_check():
         'python_version': os.environ.get('PYTHON_VERSION', 'unknown'),
         'on_render': 'RENDER' in os.environ,
         'database': db_status,
-        'db_path': DB_PATH
+        'timestamp': datetime.now().isoformat()
     })
 
-@app.route('/test')
-def test_page():
-    """Тестовая страница"""
-    return """
-    <h1>✅ Система контроля посещаемости</h1>
-    <p>Приложение запущено и работает!</p>
-    <ul>
-        <li><a href="/">Главная страница</a></li>
-        <li><a href="/scan">Сканирование QR</a></li>
-        <li><a href="/health">Проверка здоровья</a></li>
-        <li><a href="/api/get_classes">API: список занятий</a></li>
-    </ul>
-    """
+@app.route('/api/test_qr/<int:class_id>')
+def test_qr(class_id):
+    """Тестовый маршрут для проверки QR-кода"""
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        
+        c.execute("SELECT * FROM classes WHERE id = ?", (class_id,))
+        class_data = c.fetchone()
+        
+        if not class_data:
+            return jsonify({'error': 'Занятие не найдено'}), 404
+        
+        # Определяем правильный URL
+        if 'RENDER' in os.environ:
+            base_url = 'https://attendance-system-rbif.onrender.com'
+        else:
+            base_url = request.host_url.rstrip('/')
+        
+        qr_data = f"{base_url}/scan?token={class_data['qr_token']}"
+        
+        return jsonify({
+            'success': True,
+            'class_id': class_id,
+            'subject': class_data['subject'],
+            'qr_token': class_data['qr_token'],
+            'qr_data': qr_data,
+            'qr_link': f"{base_url}/api/generate_qr/{class_id}"
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 # ================== ЗАПУСК ПРИЛОЖЕНИЯ ==================
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    print(f"🚀 Запуск приложения на порту {port}")
+    print(f"🚀 Запуск системы контроля посещаемости")
     print(f"📁 Путь к БД: {DB_PATH}")
-    print(f"🌐 Режим: {'PRODUCTION' if 'RENDER' in os.environ else 'DEVELOPMENT'}")
-    app.run(host='0.0.0.0', port=port)
+    print(f"🌐 Порт: {port}")
+    print(f"⚙️ Режим: {'PRODUCTION' if 'RENDER' in os.environ else 'DEVELOPMENT'}")
+    app.run(host='0.0.0.0', port=port, debug=True)
