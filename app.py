@@ -272,14 +272,19 @@ def generate_qr(class_id):
 
 @app.route('/api/mark_attendance', methods=['POST'])
 def mark_attendance():
-    """Отметка посещаемости по токену"""
+    """Отметка посещаемости по токену из QR-кода - ИСПРАВЛЕННАЯ ВЕРСИЯ"""
     try:
         data = request.json
+        if not data:
+            return jsonify({'success': False, 'error': 'Нет данных'}), 400
+        
         token = data.get('token')
         student_id = data.get('student_id')
         
+        print(f"📱 Получен запрос на отметку: token={token}, student={student_id}")
+        
         if not token or not student_id:
-            return jsonify({'success': False, 'error': 'Недостаточно данных'})
+            return jsonify({'success': False, 'error': 'Недостаточно данных'}), 400
         
         conn = get_db()
         c = conn.cursor()
@@ -289,7 +294,8 @@ def mark_attendance():
         class_data = c.fetchone()
         
         if not class_data:
-            return jsonify({'success': False, 'error': 'Неверный QR-код'})
+            conn.close()
+            return jsonify({'success': False, 'error': 'Неверный QR-код'}), 404
         
         class_id = class_data['id']
         
@@ -298,7 +304,8 @@ def mark_attendance():
                   (student_id, class_id))
         
         if c.fetchone():
-            return jsonify({'success': False, 'error': 'Вы уже отметились'})
+            conn.close()
+            return jsonify({'success': False, 'error': 'Вы уже отметились'}), 400
         
         # Добавляем запись о посещаемости
         scan_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -308,13 +315,18 @@ def mark_attendance():
         )
         
         conn.commit()
+        
+        # Получаем имя студента для логов
+        c.execute("SELECT name FROM students WHERE id = ?", (student_id,))
+        student_name = c.fetchone()['name']
+        
         conn.close()
         
-        print(f"✅ Отмечена посещаемость: студент {student_id}, занятие {class_id}")
+        print(f"✅ Отмечена посещаемость: {student_name} (ID: {student_id}), занятие ID: {class_id}")
         
         return jsonify({
             'success': True,
-            'message': 'Посещаемость успешно отмечена!'
+            'message': f'Посещаемость успешно отмечена для {student_name}!'
         })
         
     except Exception as e:
