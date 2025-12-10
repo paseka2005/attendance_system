@@ -424,7 +424,6 @@
             margin-bottom: 15px;
         }
         
-        /* Добавляем стили для новой кнопки экспорта */
         .export-btn {
             background: linear-gradient(135deg, #28a745 0%, #218838 100%);
             margin-top: 5px;
@@ -556,13 +555,17 @@
                         </div>
                         <img id="qrImage" class="qr-image hidden" alt="QR Code">
                         <p id="noQR" style="color: #666; padding: 20px; text-align: center;">
-                            Выберите занятие и нажмите "QR-код" для генерации
+                            Выберите занятие и нажмите "Сгенерировать QR-код"
                         </p>
                         <div id="qrError" class="alert-error hidden"></div>
                     </div>
                     
                     <button onclick="generateQR(selectedClassId)" class="secondary" id="generateQRBtn" disabled>
                         📱 Сгенерировать QR-код
+                    </button>
+                    
+                    <button onclick="refreshQR()" class="info" id="refreshQRBtn" disabled style="margin-top: 10px;">
+                        🔄 Обновить QR-код
                     </button>
                 </div>
                 
@@ -597,6 +600,7 @@
         let selectedClassId = null;
         let currentClassName = 'Не выбрано';
         let autoRefreshInterval = null;
+        let currentQRToken = null;
         
         // Загружаем занятия при загрузке страницы
         document.addEventListener('DOMContentLoaded', function() {
@@ -712,6 +716,7 @@
                     currentClassName = 'Не выбрано';
                     document.getElementById('currentClass').textContent = currentClassName;
                     document.getElementById('generateQRBtn').disabled = true;
+                    document.getElementById('refreshQRBtn').disabled = true;
                     document.getElementById('attendanceInfo').classList.add('hidden');
                     document.getElementById('attendanceTable').style.display = 'none';
                     document.getElementById('noAttendance').style.display = 'block';
@@ -753,7 +758,7 @@
                                 <button onclick="selectClass(${cls.id}, '${escapedSubject}')" class="${isSelected ? 'success' : ''}">
                                     ${isSelected ? '✅ Выбрано' : '👁️ Выбрать'}
                                 </button>
-                                <button onclick="generateQR(${cls.id})" class="secondary" ${!isSelected ? 'disabled' : ''}>
+                                <button onclick="generateQR(${cls.id})" class="secondary">
                                     📱 QR-код
                                 </button>
                                 <button onclick="deleteClass(${cls.id})" class="danger">
@@ -784,6 +789,7 @@
             
             document.getElementById('currentClass').textContent = currentClassName;
             document.getElementById('generateQRBtn').disabled = false;
+            document.getElementById('refreshQRBtn').disabled = false;
             document.getElementById('attendanceInfo').classList.remove('hidden');
             
             // Обновляем подсветку
@@ -806,8 +812,10 @@
             // Загружаем посещаемость
             await loadAttendance(classId);
             
-            // Генерируем QR-код
-            await generateQR(classId);
+            // НЕ генерируем QR-код автоматически, только включаем кнопку
+            document.getElementById('noQR').style.display = 'block';
+            document.getElementById('qrImage').classList.add('hidden');
+            document.getElementById('qrError').classList.add('hidden');
             
             // Запускаем автообновление посещаемости
             startAutoRefresh();
@@ -835,6 +843,7 @@
                         currentClassName = 'Не выбрано';
                         document.getElementById('currentClass').textContent = currentClassName;
                         document.getElementById('generateQRBtn').disabled = true;
+                        document.getElementById('refreshQRBtn').disabled = true;
                         document.getElementById('attendanceInfo').classList.add('hidden');
                         document.getElementById('attendanceBody').innerHTML = '';
                         document.getElementById('attendanceTable').style.display = 'none';
@@ -1022,6 +1031,7 @@
             const qrLoading = document.getElementById('qrLoading');
             const qrError = document.getElementById('qrError');
             const generateQRBtn = document.getElementById('generateQRBtn');
+            const refreshQRBtn = document.getElementById('refreshQRBtn');
             
             // Показываем индикатор загрузки
             qrImage.classList.add('hidden');
@@ -1029,6 +1039,7 @@
             qrError.classList.add('hidden');
             qrLoading.classList.remove('hidden');
             generateQRBtn.disabled = true;
+            refreshQRBtn.disabled = true;
             generateQRBtn.innerHTML = '<span class="loading"></span>Генерация...';
             
             try {
@@ -1082,7 +1093,15 @@
                 showAlert(`❌ Ошибка генерации QR-кода: ${error.message}`, 'error');
             } finally {
                 generateQRBtn.disabled = false;
+                refreshQRBtn.disabled = false;
                 generateQRBtn.textContent = '📱 Сгенерировать QR-код';
+            }
+        }
+        
+        // Обновление QR-кода
+        function refreshQR() {
+            if (selectedClassId) {
+                generateQR(selectedClassId);
             }
         }
         
