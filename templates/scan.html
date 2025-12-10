@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Отметка посещаемости</title>
+    <meta charset="UTF-8">
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        body { font-family: Arial; text-align: center; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; color: white; }
+        .container { max-width: 500px; margin: 0 auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); color: #333; }
+        h1 { color: #333; margin-bottom: 20px; }
+        #reader { width: 100%; margin: 20px auto; }
+        #result { padding: 15px; margin: 20px 0; border-radius: 5px; font-weight: bold; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        select, button { padding: 12px 20px; margin: 10px; font-size: 16px; border: none; border-radius: 5px; }
+        select { width: 100%; border: 2px solid #667eea; }
+        button { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-weight: bold; cursor: pointer; }
+        button:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .info { background: #e9ecef; padding: 15px; border-radius: 5px; margin: 20px 0; color: #495057; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📱 Отметка посещаемости</h1>
+        
+        <div class="info">
+            <strong>Инструкция:</strong><br>
+            1. Выберите свое имя из списка<br>
+            2. Наведите камеру на QR-код преподавателя<br>
+            3. Дождитесь подтверждения
+        </div>
+        
+        <div>
+            <label for="studentSelect" style="display: block; text-align: left; margin-bottom: 5px; font-weight: bold;">
+                Выберите себя:
+            </label>
+            <select id="studentSelect">
+                <option value="">-- Выберите студента --</option>
+                <option value="1">Иван Петров (Группа 101)</option>
+                <option value="2">Мария Сидорова (Группа 101)</option>
+                <option value="3">Алексей Иванов (Группа 102)</option>
+            </select>
+        </div>
+        
+        <div id="reader"></div>
+        <div id="result"></div>
+        
+        <button onclick="location.href='/'">← На главную</button>
+    </div>
+    
+    <script>
+        const studentSelect = document.getElementById('studentSelect');
+        let scanner = null;
+        
+        studentSelect.onchange = () => {
+            const studentId = studentSelect.value;
+            if (studentId && !scanner) {
+                startScanner();
+            }
+        };
+        
+        function startScanner() {
+            document.getElementById('reader').innerHTML = '';
+            
+            scanner = new Html5QrcodeScanner('reader', {
+                qrbox: { width: 250, height: 250 },
+                fps: 10,
+                formatsToSupport: [0] // QR_CODE
+            });
+            
+            scanner.render(onScanSuccess);
+        }
+        
+        function onScanSuccess(decodedText) {
+            const studentId = studentSelect.value;
+            
+            if (!studentId) {
+                showResult('❌ Сначала выберите свое имя!', 'error');
+                return;
+            }
+            
+            scanner.clear();
+            scanner = null;
+            
+            // Извлекаем токен из URL
+            const tokenMatch = decodedText.match(/\/api\/mark\/([a-f0-9\-]+)/);
+            if (!tokenMatch) {
+                showResult('❌ Неверный QR-код', 'error');
+                setTimeout(() => { if (studentSelect.value) startScanner(); }, 2000);
+                return;
+            }
+            
+            const token = tokenMatch[1];
+            
+            // Отправляем запрос на сервер
+            fetch(`/api/mark/${token}`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ student_id: studentId })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showResult('✅ ' + data.message, 'success');
+                    studentSelect.disabled = true;
+                } else {
+                    showResult('❌ ' + data.error, 'error');
+                    setTimeout(() => { if (studentSelect.value) startScanner(); }, 2000);
+                }
+            })
+            .catch(err => {
+                showResult('❌ Ошибка соединения', 'error');
+                setTimeout(() => { if (studentSelect.value) startScanner(); }, 2000);
+            });
+        }
+        
+        function showResult(message, className) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = message;
+            resultDiv.className = className;
+        }
+    </script>
+</body>
+</html>

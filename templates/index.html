@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Контроль посещаемости</title>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h1 { color: #333; border-bottom: 2px solid #4CAF50; padding-bottom: 10px; }
+        .panel { background: #f9f9f9; padding: 20px; margin: 20px 0; border-radius: 5px; }
+        table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background: #4CAF50; color: white; }
+        .present { background: #d4edda; }
+        .absent { background: #f8d7da; }
+        .late { background: #fff3cd; }
+        button, select, input { padding: 8px 15px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; }
+        button { background: #4CAF50; color: white; cursor: pointer; }
+        button:hover { background: #45a049; }
+        .qr-img { max-width: 200px; margin: 10px 0; border: 1px solid #ccc; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎓 Система контроля посещаемости</h1>
+        
+        <!-- Панель создания занятия -->
+        <div class="panel">
+            <h2>Создать новое занятие</h2>
+            <form id="createClassForm">
+                <input type="text" name="subject" placeholder="Название предмета" required>
+                <input type="datetime-local" name="date_time" required>
+                <button type="submit">Создать занятие</button>
+            </form>
+        </div>
+        
+        <!-- Список занятий -->
+        <div class="panel">
+            <h2>Занятия</h2>
+            <div id="classesList">
+                {% for class in classes %}
+                <div style="margin: 10px 0; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                    <strong>{{ class.subject }}</strong> - {{ class.date_time }}
+                    <button onclick="generateQR({{ class.id }})">QR-код</button>
+                    <button onclick="loadAttendance({{ class.id }})">Посещаемость</button>
+                    <a href="/api/export_csv/{{ class.id }}"><button>CSV</button></a>
+                    <div id="qr_{{ class.id }}"></div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- Таблица посещаемости -->
+        <div class="panel">
+            <h2>Посещаемость <span id="classTitle"></span></h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Студент</th>
+                        <th>Группа</th>
+                        <th>Статус</th>
+                        <th>Изменить</th>
+                    </tr>
+                </thead>
+                <tbody id="attendanceTable">
+                    {% for student in attendance %}
+                    <tr class="{{ student.status }}">
+                        <td>{{ student.name }}</td>
+                        <td>{{ student.group_name }}</td>
+                        <td>{{ student.status }}</td>
+                        <td>
+                            <select onchange="updateStatus({{ student.id }}, this.value)">
+                                <option value="present" {% if student.status == 'present' %}selected{% endif %}>Присутствовал</option>
+                                <option value="absent" {% if student.status == 'absent' %}selected{% endif %}>Отсутствовал</option>
+                                <option value="late" {% if student.status == 'late' %}selected{% endif %}>Опоздал</option>
+                            </select>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Ссылка для студентов -->
+        <div class="panel" style="background: #e8f4f8;">
+            <h2>📱 Для студентов</h2>
+            <p>Ссылка для отметки посещаемости:</p>
+            <input type="text" id="studentLink" value="{{ request.host_url }}scan" readonly style="width: 400px; padding: 10px;">
+            <button onclick="copyLink()">Копировать</button>
+            <p style="color: #666; font-size: 14px; margin-top: 10px;">
+                Отправьте эту ссылку студентам или покажите QR-код
+            </p>
+        </div>
+    </div>
+    
+    <script>
+        const selectedClassId = {{ selected_class }};
+        
+        // Создание занятия
+        document.getElementById('createClassForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            
+            const response = await fetch('/api/create_class', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            if (result.success) {
+                alert('Занятие создано!');
+                location.reload();
+            }
+        };
+        
+        // Генерация QR-кода
+        function generateQR(classId) {
+            const qrDiv = document.getElementById(`qr_${classId}`);
+            qrDiv.innerHTML = `<img src="/api/generate_qr/${classId}" class="qr-img" alt="QR Code">`;
+        }
+        
+        // Загрузка посещаемости
+        async function loadAttendance(classId) {
+            const response = await fetch(`/api/get_attendance/${classId}`);
+            const attendance = await response.json();
+            
+            const tbody = document.getElementById('attendanceTable');
+            tbody.innerHTML = '';
+            
+            attendance.forEach(student => {
+                const tr = document.createElement('tr');
+                tr.className = student.status;
+                tr.innerHTML = `
+                    <td>${student.name}</td>
+                    <td>${student.group_name}</td>
+                    <td>${student.status}</td>
+                    <td>
+                        <select onchange="updateStatus(${student.id}, this.value)">
+                            <option value="present" ${student.status === 'present' ? 'selected' : ''}>Присутствовал</option>
+                            <option value="absent" ${student.status === 'absent' ? 'selected' : ''}>Отсутствовал</option>
+                            <option value="late" ${student.status === 'late' ? 'selected' : ''}>Опоздал</option>
+                        </select>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            
+            document.getElementById('classTitle').textContent = '(Текущее занятие)';
+        }
+        
+        // Изменение статуса
+        function updateStatus(studentId, status) {
+            fetch('/api/update_status', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    student_id: studentId,
+                    class_id: selectedClassId,
+                    status: status
+                })
+            });
+            
+            // Меняем цвет строки
+            event.target.closest('tr').className = status;
+        }
+        
+        // Копирование ссылки
+        function copyLink() {
+            const linkInput = document.getElementById('studentLink');
+            linkInput.select();
+            navigator.clipboard.writeText(linkInput.value);
+            alert('Ссылка скопирована!');
+        }
+    </script>
+</body>
+</html>
