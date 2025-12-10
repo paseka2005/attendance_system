@@ -34,7 +34,7 @@
         header {
             background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%);
             color: white;
-            padding: 25px;
+            padding: 20px;
             text-align: center;
         }
         
@@ -53,7 +53,7 @@
         .college-full {
             font-size: 0.9rem;
             opacity: 0.9;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
         }
         
         h1 {
@@ -67,15 +67,15 @@
         }
         
         .main-content {
-            padding: 30px;
+            padding: 25px;
         }
         
         .info-box {
             background: #e8f4f8;
             border: 2px solid #2a5298;
             border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 25px;
+            padding: 15px;
+            margin-bottom: 20px;
         }
         
         .info-box h3 {
@@ -96,12 +96,12 @@
         }
         
         .form-group {
-            margin-bottom: 25px;
+            margin-bottom: 20px;
         }
         
         label {
             display: block;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             font-weight: 600;
             color: #1e3c72;
             font-size: 1.1rem;
@@ -109,9 +109,9 @@
         
         select {
             width: 100%;
-            padding: 15px;
+            padding: 12px 15px;
             border: 2px solid #ddd;
-            border-radius: 10px;
+            border-radius: 8px;
             font-size: 16px;
             background: white;
             cursor: pointer;
@@ -124,27 +124,55 @@
             box-shadow: 0 0 0 3px rgba(42, 82, 152, 0.2);
         }
         
+        select:disabled {
+            background: #f5f5f5;
+            cursor: not-allowed;
+        }
+        
         #reader {
             width: 100%;
-            margin: 20px 0;
-            border: 2px dashed #2a5298;
+            margin: 15px 0;
+            border: 2px solid #2a5298;
             border-radius: 10px;
-            padding: 20px;
+            padding: 10px;
             background: #f8f9fa;
-            min-height: 300px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            min-height: 280px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .scanner-active {
+            border-color: #4CAF50 !important;
+            border-width: 3px !important;
+        }
+        
+        .scanner-label {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: #4CAF50;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            z-index: 10;
         }
         
         #result {
-            padding: 20px;
+            padding: 15px;
             border-radius: 10px;
-            margin: 20px 0;
+            margin: 15px 0;
             font-weight: 600;
             text-align: center;
             font-size: 1.1rem;
             display: none;
+            animation: fadeIn 0.5s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
         
         .success {
@@ -168,52 +196,27 @@
             display: block !important;
         }
         
-        .buttons {
-            display: flex;
-            gap: 15px;
-            margin-top: 25px;
+        .scanning-status {
+            text-align: center;
+            padding: 10px;
+            color: #666;
+            font-size: 0.9rem;
         }
         
-        button {
-            flex: 1;
-            padding: 16px;
-            border: none;
-            border-radius: 10px;
-            font-size: 16px;
+        .scanning-active {
+            color: #4CAF50 !important;
             font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%);
-            color: white;
-        }
-        
-        .btn-primary:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 25px rgba(42, 82, 152, 0.3);
-        }
-        
-        .btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none !important;
-            box-shadow: none !important;
         }
         
         .loading {
             display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #2a5298;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #2a5298;
             border-radius: 50%;
             animation: spin 1s linear infinite;
+            margin-right: 8px;
         }
         
         @keyframes spin {
@@ -221,18 +224,62 @@
             100% { transform: rotate(360deg); }
         }
         
-        footer {
-            text-align: center;
-            padding: 20px;
-            color: #666;
-            border-top: 1px solid #eee;
-            margin-top: 20px;
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .status-waiting {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-scanning {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .student-info {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 15px;
+            border-left: 4px solid #2a5298;
+        }
+        
+        .student-info p {
+            margin: 5px 0;
+            color: #555;
             font-size: 0.9rem;
         }
         
+        footer {
+            text-align: center;
+            padding: 15px;
+            color: #666;
+            border-top: 1px solid #eee;
+            margin-top: 15px;
+            font-size: 0.8rem;
+        }
+        
         @media (max-width: 480px) {
-            .buttons {
-                flex-direction: column;
+            .main-content {
+                padding: 15px;
             }
             
             h1 {
@@ -242,19 +289,48 @@
             .college-name {
                 font-size: 1rem;
             }
+            
+            #reader {
+                min-height: 250px;
+                padding: 5px;
+            }
         }
         
-        .student-info {
-            background: #f8f9fa;
+        .auto-scan-notice {
+            background: #e7f3ff;
+            border: 1px solid #b3d7ff;
             border-radius: 8px;
-            padding: 15px;
-            margin-top: 20px;
-            border-left: 4px solid #2a5298;
+            padding: 10px;
+            margin-bottom: 15px;
+            text-align: center;
+            color: #004085;
+            font-size: 0.9rem;
         }
         
-        .student-info p {
-            margin: 5px 0;
-            color: #555;
+        .selected-student {
+            background: #e8f4f8;
+            border: 2px solid #2a5298;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 15px;
+            display: none;
+        }
+        
+        .selected-student.show {
+            display: block;
+            animation: slideIn 0.3s;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .countdown {
+            font-size: 0.9rem;
+            color: #666;
+            text-align: center;
+            margin-top: 10px;
         }
     </style>
 </head>
@@ -269,18 +345,18 @@
         </header>
         
         <div class="main-content">
+            <div class="auto-scan-notice">
+                <strong>⚠️ Автоматическое сканирование</strong><br>
+                Камера запустится автоматически после выбора имени
+            </div>
+            
             <div class="info-box">
                 <h3>📋 Инструкция по отметке:</h3>
                 <ol>
                     <li>Выберите свое имя из списка ниже</li>
                     <li>Наведите камеру телефона на QR-код</li>
-                    <li>Дождитесь подтверждения отметки</li>
+                    <li>Система автоматически отметит ваше присутствие</li>
                 </ol>
-            </div>
-            
-            <div class="student-info">
-                <p><strong>Внимание:</strong> Отметьтесь только один раз на каждом занятии</p>
-                <p><strong>Важно:</strong> Выберите правильно свое имя из списка</p>
             </div>
             
             <div class="form-group">
@@ -293,18 +369,30 @@
                 </select>
             </div>
             
+            <div id="selectedStudentInfo" class="selected-student">
+                <div id="studentNameDisplay" style="font-weight: 600; color: #1e3c72;"></div>
+                <div style="font-size: 0.9rem; color: #666; margin-top: 5px;">
+                    Готово к сканированию...
+                </div>
+            </div>
+            
+            <div class="scanning-status">
+                <div id="scanStatus" class="status-indicator status-waiting">
+                    ⏳ Ожидание выбора студента
+                </div>
+            </div>
+            
             <div id="reader">
+                <div class="scanner-label" style="display: none;">СКАНИРОВАНИЕ</div>
                 <p style="color: #666; text-align: center; padding: 40px;">
-                    После выбора студента здесь появится область сканирования
+                    Выберите свое имя для активации сканера
                 </p>
             </div>
             
             <div id="result"></div>
             
-            <div class="buttons">
-                <button onclick="startScanner()" class="btn-primary" id="startBtn">
-                    🚀 Начать сканирование
-                </button>
+            <div class="countdown" id="countdown" style="display: none;">
+                Автоматическое закрытие через: <span id="countdownTimer">5</span> сек.
             </div>
         </div>
         
@@ -318,33 +406,105 @@
         let scanner = null;
         let isScanning = false;
         let currentStudentId = null;
+        let countdownInterval = null;
+        
+        // Объект с именами студентов
+        const students = {
+            '1': 'Иван Петров (Группа 101)',
+            '2': 'Мария Сидорова (Группа 101)',
+            '3': 'Алексей Иванов (Группа 102)'
+        };
         
         // Инициализация сканера при выборе студента
         document.getElementById('studentSelect').addEventListener('change', function() {
             currentStudentId = this.value;
-            if (currentStudentId && !isScanning) {
-                startScanner();
+            
+            if (currentStudentId) {
+                // Показываем выбранного студента
+                const studentInfo = document.getElementById('selectedStudentInfo');
+                const studentNameDisplay = document.getElementById('studentNameDisplay');
+                
+                studentNameDisplay.textContent = students[currentStudentId];
+                studentInfo.classList.add('show');
+                
+                // Обновляем статус
+                updateScanStatus('scanning', '🔍 Сканирование активно');
+                
+                // Запускаем сканер автоматически
+                setTimeout(() => {
+                    startScanner();
+                }, 500); // Небольшая задержка для UX
+                
+                // Блокируем выбор другого студента
+                this.disabled = true;
+            } else {
+                // Скрываем информацию о студенте
+                document.getElementById('selectedStudentInfo').classList.remove('show');
+                updateScanStatus('waiting', '⏳ Ожидание выбора студента');
+                
+                // Останавливаем сканер, если он запущен
+                if (scanner && isScanning) {
+                    scanner.clear();
+                    scanner = null;
+                    isScanning = false;
+                }
             }
         });
         
-        // Запуск сканирования
-        function startScanner() {
-            if (!currentStudentId) {
-                showResult('❌ Сначала выберите свое имя из списка!', 'error');
-                return;
+        // Обновление статуса сканирования
+        function updateScanStatus(status, message) {
+            const statusElement = document.getElementById('scanStatus');
+            const reader = document.getElementById('reader');
+            const scannerLabel = reader.querySelector('.scanner-label');
+            
+            // Удаляем все классы статуса
+            statusElement.className = 'status-indicator';
+            
+            // Добавляем соответствующий класс
+            switch(status) {
+                case 'waiting':
+                    statusElement.classList.add('status-waiting');
+                    reader.classList.remove('scanner-active');
+                    scannerLabel.style.display = 'none';
+                    break;
+                case 'scanning':
+                    statusElement.classList.add('status-scanning');
+                    reader.classList.add('scanner-active');
+                    scannerLabel.style.display = 'block';
+                    break;
+                case 'success':
+                    statusElement.classList.add('status-success');
+                    reader.classList.remove('scanner-active');
+                    scannerLabel.style.display = 'none';
+                    break;
+                case 'error':
+                    statusElement.classList.add('status-error');
+                    reader.classList.remove('scanner-active');
+                    scannerLabel.style.display = 'none';
+                    break;
             }
             
-            if (isScanning) {
+            statusElement.innerHTML = message;
+        }
+        
+        // Запуск сканирования
+        function startScanner() {
+            if (!currentStudentId || isScanning) {
                 return;
             }
             
             isScanning = true;
-            const startBtn = document.getElementById('startBtn');
-            startBtn.disabled = true;
-            startBtn.innerHTML = '<span class="loading"></span>Сканирование...';
             
             // Очищаем предыдущий сканер
-            document.getElementById('reader').innerHTML = '';
+            document.getElementById('reader').innerHTML = `
+                <div class="scanner-label">СКАНИРОВАНИЕ</div>
+                <div style="display: flex; justify-content: center; align-items: center; height: 250px;">
+                    <div style="text-align: center;">
+                        <div class="loading" style="width: 40px; height: 40px; margin: 0 auto 15px;"></div>
+                        <p style="color: #666;">Запуск сканера...</p>
+                    </div>
+                </div>
+            `;
             
             // Создаем новый сканер
             scanner = new Html5QrcodeScanner('reader', {
@@ -352,36 +512,49 @@
                     width: 250,
                     height: 250
                 },
-                fps: 10,
+                fps: 20, // Увеличиваем FPS для более быстрого сканирования
                 formatsToSupport: [0],
                 showTorchButtonIfSupported: true,
-                showZoomSliderIfSupported: true
-            });
+                showZoomSliderIfSupported: true,
+                rememberLastUsedCamera: true,
+                supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
+            }, false); // verbose = false
             
-            // Настраиваем стили
-            setTimeout(() => {
-                const scanRegion = document.querySelector('#reader > div');
-                if (scanRegion) {
-                    scanRegion.style.borderRadius = '10px';
-                    scanRegion.style.overflow = 'hidden';
+            // Настраиваем сканер для максимальной производительности
+            const qrCodeSuccessCallback = (decodedText) => {
+                // Останавливаем сканирование сразу после успеха
+                if (scanner && isScanning) {
+                    scanner.clear().then(() => {
+                        scanner = null;
+                        isScanning = false;
+                        processScannedCode(decodedText);
+                    }).catch(err => {
+                        console.error("Ошибка при остановке сканера:", err);
+                        scanner = null;
+                        isScanning = false;
+                        processScannedCode(decodedText);
+                    });
+                } else {
+                    processScannedCode(decodedText);
                 }
-            }, 100);
+            };
+            
+            const qrCodeErrorCallback = (error) => {
+                // Игнорируем большинство ошибок сканирования
+                if (!error.includes('NotFoundException')) {
+                    console.debug('Ошибка сканирования (можно игнорировать):', error);
+                }
+            };
             
             // Запускаем сканирование
-            scanner.render(onScanSuccess, onScanError);
+            scanner.render(qrCodeSuccessCallback, qrCodeErrorCallback);
+            
+            // Обновляем статус
+            updateScanStatus('scanning', '🔍 Наведите камеру на QR-код');
         }
         
-        // Обработка успешного сканирования
-        async function onScanSuccess(decodedText) {
-            // Останавливаем сканирование
-            if (scanner) {
-                scanner.clear();
-                scanner = null;
-            }
-            
-            isScanning = false;
-            const startBtn = document.getElementById('startBtn');
-            
+        // Обработка отсканированного кода
+        async function processScannedCode(decodedText) {
             // Извлекаем токен из QR-кода
             let token = null;
             
@@ -393,9 +566,8 @@
                 // Не URL, пробуем другой формат
             }
             
-            // Формат 2: Прямой токен
+            // Формат 2: Прямой токен (UUID)
             if (!token) {
-                // Ищем UUID в тексте
                 const uuidRegex = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
                 const match = decodedText.match(uuidRegex);
                 if (match) {
@@ -403,18 +575,31 @@
                 }
             }
             
+            // Формат 3: QR-код содержит только токен
+            if (!token && decodedText.length === 36) {
+                // Проверяем, является ли это UUID
+                const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+                if (uuidPattern.test(decodedText)) {
+                    token = decodedText;
+                }
+            }
+            
             if (!token) {
                 showResult('❌ Неверный QR-код. Отсканируйте код с занятия.', 'error');
-                startBtn.disabled = false;
-                startBtn.innerHTML = '🔄 Сканировать снова';
+                updateScanStatus('error', '❌ Ошибка: неверный QR-код');
+                
+                // Перезапускаем сканер через 2 секунды
                 setTimeout(() => {
-                    if (currentStudentId) startScanner();
-                }, 3000);
+                    if (currentStudentId) {
+                        startScanner();
+                    }
+                }, 2000);
                 return;
             }
             
             // Показываем загрузку
             showResult('⏳ Отправка данных на сервер...', 'info');
+            updateScanStatus('scanning', '⏳ Обработка данных...');
             
             try {
                 // Отправляем запрос на сервер
@@ -433,23 +618,16 @@
                 
                 if (result.success) {
                     showResult('✅ ' + result.message, 'success');
+                    updateScanStatus('success', '✅ Посещаемость отмечена!');
                     
-                    // Блокируем повторное сканирование
-                    document.getElementById('studentSelect').disabled = true;
-                    startBtn.disabled = true;
-                    startBtn.innerHTML = '✅ Посещаемость отмечена';
-                    
-                    // Показываем сообщение об успехе на 10 секунд
-                    setTimeout(() => {
-                        showResult('✅ Вы отметились на занятии. Можете закрыть страницу.', 'success');
-                    }, 5000);
+                    // Запускаем обратный отсчет
+                    startCountdown();
                     
                 } else {
                     showResult('❌ ' + result.error, 'error');
-                    startBtn.disabled = false;
-                    startBtn.innerHTML = '🔄 Сканировать снова';
+                    updateScanStatus('error', '❌ Ошибка: ' + result.error);
                     
-                    // Разрешаем сканировать снова через 3 секунды
+                    // Перезапускаем сканер через 3 секунды
                     setTimeout(() => {
                         if (currentStudentId) {
                             startScanner();
@@ -459,10 +637,9 @@
             } catch (error) {
                 console.error('Ошибка сети:', error);
                 showResult('❌ Ошибка соединения с сервером', 'error');
-                startBtn.disabled = false;
-                startBtn.innerHTML = '🔄 Сканировать снова';
+                updateScanStatus('error', '❌ Ошибка сети');
                 
-                // Разрешаем сканировать снова через 3 секунды
+                // Перезапускаем сканер через 3 секунды
                 setTimeout(() => {
                     if (currentStudentId) {
                         startScanner();
@@ -471,10 +648,29 @@
             }
         }
         
-        // Обработка ошибок сканирования
-        function onScanError(error) {
-            // Игнорируем обычные ошибки
-            console.debug('Ошибка сканирования:', error);
+        // Обратный отсчет после успешной отметки
+        function startCountdown() {
+            let seconds = 8;
+            const countdownElement = document.getElementById('countdown');
+            const timerElement = document.getElementById('countdownTimer');
+            
+            countdownElement.style.display = 'block';
+            timerElement.textContent = seconds;
+            
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+            }
+            
+            countdownInterval = setInterval(() => {
+                seconds--;
+                timerElement.textContent = seconds;
+                
+                if (seconds <= 0) {
+                    clearInterval(countdownInterval);
+                    // Показываем финальное сообщение
+                    showResult('✅ Вы отметились на занятии. Можете закрыть страницу.', 'success');
+                }
+            }, 1000);
         }
         
         // Показать результат
@@ -489,6 +685,16 @@
             if (isScanning) {
                 e.preventDefault();
                 e.returnValue = 'Вы сканируете QR-код. Закрыть страницу?';
+            }
+        });
+        
+        // Автоматический запуск камеры при загрузке, если есть разрешение
+        window.addEventListener('load', function() {
+            // Проверяем, есть ли сохраненный выбор студента
+            const savedStudent = localStorage.getItem('lastStudent');
+            if (savedStudent && students[savedStudent]) {
+                document.getElementById('studentSelect').value = savedStudent;
+                document.getElementById('studentSelect').dispatchEvent(new Event('change'));
             }
         });
         
