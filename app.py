@@ -268,100 +268,42 @@ def generate_qr(class_id):
         print(f"❌ Ошибка генерации QR-кода: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-# ================== ОТМЕТКА ПОСЕЩАЕМОСТИ ==================
-
-@app.route('/api/mark_attendance', methods=['POST'])
-def mark_attendance():
-    """Отметка посещаемости - ИСПРАВЛЕННАЯ ВЕРСИЯ"""
-    try:
-        # ПРОВЕРЯЕМ, ЧТО ПРИШЛИ ДАННЫЕ
-        if not request.is_json:
-            print("❌ Ошибка: Content-Type не application/json")
-            return jsonify({'success': False, 'error': 'Требуется JSON'}), 400
-            
-        data = request.get_json()
+@app.route('/api/test_mark', methods=['GET', 'POST'])
+def test_mark():
+    """Тестовый эндпоинт для проверки отметки"""
+    if request.method == 'GET':
+        # Показываем форму для тестирования
+        return '''
+        <h1>Тест отметки посещаемости</h1>
+        <form method="POST">
+            Токен: <input name="token" value=""><br>
+            Student ID: <input name="student_id" value="1"><br>
+            <button type="submit">Тест</button>
+        </form>
+        '''
+    else:
+        # Эмулируем запрос от QR-сканера
+        token = request.form.get('token')
+        student_id = request.form.get('student_id')
         
-        if not data:
-            print("❌ Ошибка: Нет данных в запросе")
-            return jsonify({'success': False, 'error': 'Нет данных'}), 400
-        
-        token = data.get('token')
-        student_id = data.get('student_id')
-        
-        print(f"📱 Получен запрос на отметку: token={token}, student_id={student_id}")
-        print(f"📱 Тип student_id: {type(student_id)}, значение: {student_id}")
-        
-        if not token:
-            print("❌ Ошибка: Нет токена")
-            return jsonify({'success': False, 'error': 'Нет токена'}), 400
-        
-        if not student_id:
-            print("❌ Ошибка: Нет student_id")
-            return jsonify({'success': False, 'error': 'Выберите студента'}), 400
-        
-        # Преобразуем student_id в int
-        try:
-            student_id = int(student_id)
-        except ValueError:
-            print(f"❌ Ошибка: student_id не число: {student_id}")
-            return jsonify({'success': False, 'error': 'Неверный ID студента'}), 400
-        
+        # Проверяем в БД
         conn = get_db()
         c = conn.cursor()
         
-        # НАХОДИМ ЗАНЯТИЕ ПО ТОКЕНУ
-        c.execute("SELECT id, subject FROM classes WHERE qr_token = ?", (token,))
+        c.execute("SELECT * FROM classes WHERE qr_token = ?", (token,))
         class_data = c.fetchone()
         
-        if not class_data:
-            conn.close()
-            print(f"❌ Токен не найден: {token}")
-            return jsonify({'success': False, 'error': 'Неверный QR-код'}), 404
-        
-        class_id = class_data['id']
-        subject = class_data['subject']
-        
-        print(f"✅ Найдено занятие: {subject} (ID: {class_id})")
-        
-        # ПРОВЕРЯЕМ, НЕ ОТМЕТИЛСЯ ЛИ УЖЕ
-        c.execute("SELECT * FROM attendance WHERE student_id = ? AND class_id = ?",
-                  (student_id, class_id))
-        
-        if c.fetchone():
-            conn.close()
-            print(f"⚠️ Студент {student_id} уже отметился на занятии {class_id}")
-            return jsonify({'success': False, 'error': 'Вы уже отметились'}), 400
-        
-        # ДОБАВЛЯЕМ ЗАПИСЬ
-        scan_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        c.execute(
-            "INSERT INTO attendance (student_id, class_id, status, scan_time) VALUES (?, ?, 'present', ?)",
-            (student_id, class_id, scan_time)
-        )
-        
-        conn.commit()
-        
-        # ПОЛУЧАЕМ ИМЯ СТУДЕНТА
-        c.execute("SELECT name FROM students WHERE id = ?", (student_id,))
-        student_row = c.fetchone()
-        student_name = student_row['name'] if student_row else f"Студент {student_id}"
+        c.execute("SELECT * FROM students WHERE id = ?", (student_id,))
+        student_data = c.fetchone()
         
         conn.close()
         
-        print(f"✅ УСПЕХ: {student_name} отметился на {subject}")
-        
         return jsonify({
-            'success': True,
-            'message': f'Посещаемость отмечена для {student_name}!',
-            'student_name': student_name,
-            'class_subject': subject
+            'token_exists': bool(class_data),
+            'student_exists': bool(student_data),
+            'class_info': dict(class_data) if class_data else None,
+            'student_info': dict(student_data) if student_data else None
         })
-        
-    except Exception as e:
-        print(f"❌ КРИТИЧЕСКАЯ ОШИБКА: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'success': False, 'error': f'Внутренняя ошибка: {str(e)}'}), 500
 
 # ================== УПРАВЛЕНИЕ ПОСЕЩАЕМОСТЬЮ ==================
 
@@ -549,6 +491,43 @@ def test_qr(class_id):
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/test_mark', methods=['GET', 'POST'])
+def test_mark():
+    """Тестовый эндпоинт для проверки отметки"""
+    if request.method == 'GET':
+        # Показываем форму для тестирования
+        return '''
+        <h1>Тест отметки посещаемости</h1>
+        <form method="POST">
+            Токен: <input name="token" value=""><br>
+            Student ID: <input name="student_id" value="1"><br>
+            <button type="submit">Тест</button>
+        </form>
+        '''
+    else:
+        # Эмулируем запрос от QR-сканера
+        token = request.form.get('token')
+        student_id = request.form.get('student_id')
+        
+        # Проверяем в БД
+        conn = get_db()
+        c = conn.cursor()
+        
+        c.execute("SELECT * FROM classes WHERE qr_token = ?", (token,))
+        class_data = c.fetchone()
+        
+        c.execute("SELECT * FROM students WHERE id = ?", (student_id,))
+        student_data = c.fetchone()
+        
+        conn.close()
+        
+        return jsonify({
+            'token_exists': bool(class_data),
+            'student_exists': bool(student_data),
+            'class_info': dict(class_data) if class_data else None,
+            'student_info': dict(student_data) if student_data else None
+        })
 
 # ================== ЗАПУСК ПРИЛОЖЕНИЯ ==================
 
