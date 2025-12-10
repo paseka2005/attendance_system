@@ -178,21 +178,18 @@
             background: #d4edda;
             color: #155724;
             border: 1px solid #c3e6cb;
-            display: block !important;
         }
         
         .error {
             background: #f8d7da;
             color: #721c24;
             border: 1px solid #f5c6cb;
-            display: block !important;
         }
         
         .info {
             background: #d1ecf1;
             color: #0c5460;
             border: 1px solid #bee5eb;
-            display: block !important;
         }
         
         .scanning-status {
@@ -314,16 +311,6 @@
             margin-bottom: 15px;
         }
         
-        .selected-student.show {
-            display: block;
-            animation: slideIn 0.3s;
-        }
-        
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
         .countdown {
             font-size: 0.9rem;
             color: #666;
@@ -333,17 +320,6 @@
         
         .hidden {
             display: none !important;
-        }
-        
-        .debug-info {
-            background: #f8f9fa;
-            border: 1px dashed #6c757d;
-            border-radius: 8px;
-            padding: 10px;
-            margin-top: 10px;
-            font-size: 0.8rem;
-            color: #666;
-            word-break: break-all;
         }
     </style>
 </head>
@@ -358,18 +334,6 @@
         </header>
         
         <div class="main-content">
-            <!-- Простой режим для тестирования -->
-            <div class="info-box" id="manualMode" style="display: none;">
-                <h3>⚙️ Ручной режим (для тестирования):</h3>
-                <div style="margin-top: 10px;">
-                    <input type="text" id="manualToken" placeholder="Вставьте токен из QR-кода" 
-                           style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 10px;">
-                    <button onclick="manualSubmit()" style="width: 100%; padding: 10px; background: #28a745; color: white; border: none; border-radius: 5px;">
-                        ✅ Отправить вручную
-                    </button>
-                </div>
-            </div>
-            
             <div class="auto-scan-notice">
                 <strong>⚠️ Автоматическое сканирование</strong><br>
                 Камера запустится автоматически после выбора имени
@@ -416,25 +380,8 @@
             
             <div id="result" class="hidden"></div>
             
-            <div class="debug-info hidden" id="debugInfo">
-                <strong>Отладочная информация:</strong><br>
-                <div id="debugContent"></div>
-            </div>
-            
             <div class="countdown hidden" id="countdown">
                 Автоматическое закрытие через: <span id="countdownTimer">5</span> сек.
-            </div>
-            
-            <div style="text-align: center; margin-top: 15px;">
-                <button onclick="toggleDebug()" style="padding: 5px 10px; background: #6c757d; color: white; border: none; border-radius: 5px; font-size: 0.8rem;">
-                    🐛 Отладка
-                </button>
-                <button onclick="toggleManualMode()" style="padding: 5px 10px; background: #17a2b8; color: white; border: none; border-radius: 5px; font-size: 0.8rem; margin-left: 10px;">
-                    ⚙️ Ручной режим
-                </button>
-                <button onclick="testConnection()" style="padding: 5px 10px; background: #ffc107; color: black; border: none; border-radius: 5px; font-size: 0.8rem; margin-left: 10px;">
-                    🔗 Тест сервера
-                </button>
             </div>
         </div>
         
@@ -449,7 +396,6 @@
         let isScanning = false;
         let currentStudentId = null;
         let countdownInterval = null;
-        let debugMode = false;
         
         // Объект с именами студентов
         const students = {
@@ -569,11 +515,8 @@
                     supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
                 }, false);
                 
-                // Настраиваем сканер для максимальной производительности
+                // Настраиваем сканер
                 const qrCodeSuccessCallback = (decodedText) => {
-                    console.log('Отсканировано:', decodedText);
-                    addDebugInfo(`📱 Отсканировано: ${decodedText}`);
-                    
                     // Останавливаем сканирование сразу после успеха
                     if (scanner && isScanning) {
                         scanner.clear().then(() => {
@@ -582,7 +525,6 @@
                             processScannedCode(decodedText);
                         }).catch(err => {
                             console.error("Ошибка при остановке сканера:", err);
-                            addDebugInfo(`❌ Ошибка остановки сканера: ${err}`);
                             scanner = null;
                             isScanning = false;
                             processScannedCode(decodedText);
@@ -596,9 +538,6 @@
                     // Игнорируем большинство ошибок сканирования
                     if (!error.includes('NotFoundException')) {
                         console.debug('Ошибка сканирования:', error);
-                        if (debugMode) {
-                            addDebugInfo(`⚠️ Ошибка сканирования: ${error}`);
-                        }
                     }
                 };
                 
@@ -610,7 +549,6 @@
                 
             } catch (error) {
                 console.error('Ошибка создания сканера:', error);
-                addDebugInfo(`❌ Ошибка создания сканера: ${error}`);
                 
                 showResult('❌ Ошибка запуска камеры. Проверьте разрешения.', 'error');
                 updateScanStatus('error', '❌ Ошибка камеры');
@@ -671,14 +609,10 @@
             for (const pattern of patterns) {
                 token = pattern();
                 if (token) {
-                    console.log('Найден токен:', token);
-                    addDebugInfo(`✅ Извлечен токен: ${token}`);
                     return token;
                 }
             }
             
-            console.log('Токен не найден в:', qrData);
-            addDebugInfo(`❌ Токен не найден в QR-коде`);
             return null;
         }
         
@@ -702,17 +636,6 @@
             updateScanStatus('scanning', '⏳ Обработка данных...');
             
             try {
-                addDebugInfo(`📤 Отправка запроса: token=${token}, student_id=${currentStudentId}`);
-                
-                // Проверяем, существует ли эндпоинт
-                const testResponse = await fetch('/api/test_mark', {
-                    method: 'GET'
-                });
-                
-                if (!testResponse.ok) {
-                    throw new Error(`Тестовый эндпоинт недоступен: ${testResponse.status}`);
-                }
-                
                 // Отправляем запрос на сервер
                 const response = await fetch('/api/mark_attendance', {
                     method: 'POST',
@@ -725,11 +648,7 @@
                     })
                 });
                 
-                addDebugInfo(`📥 Ответ сервера: статус ${response.status}`);
-                
                 const result = await response.json();
-                console.log('Ответ сервера:', result);
-                addDebugInfo(`📥 Данные ответа: ${JSON.stringify(result)}`);
                 
                 if (result.success) {
                     showResult(`✅ ${result.message}`, 'success');
@@ -752,7 +671,6 @@
                 }
             } catch (error) {
                 console.error('Ошибка сети:', error);
-                addDebugInfo(`❌ Ошибка сети: ${error.message}`);
                 
                 showResult('❌ Ошибка соединения с сервером', 'error');
                 updateScanStatus('error', '❌ Ошибка сети');
@@ -798,69 +716,6 @@
             resultDiv.textContent = message;
             resultDiv.className = type;
             resultDiv.classList.remove('hidden');
-        }
-        
-        // Ручная отправка
-        function manualSubmit() {
-            const token = document.getElementById('manualToken').value.trim();
-            if (!token) {
-                alert('Введите токен');
-                return;
-            }
-            
-            const studentId = document.getElementById('studentSelect').value;
-            if (!studentId) {
-                alert('Выберите студента');
-                return;
-            }
-            
-            currentStudentId = studentId;
-            processScannedCode(`scan?token=${token}`);
-        }
-        
-        // Переключение ручного режима
-        function toggleManualMode() {
-            const manualDiv = document.getElementById('manualMode');
-            if (manualDiv.style.display === 'none') {
-                manualDiv.style.display = 'block';
-            } else {
-                manualDiv.style.display = 'none';
-            }
-        }
-        
-        // Переключение отладки
-        function toggleDebug() {
-            debugMode = !debugMode;
-            const debugDiv = document.getElementById('debugInfo');
-            if (debugMode) {
-                debugDiv.classList.remove('hidden');
-            } else {
-                debugDiv.classList.add('hidden');
-            }
-        }
-        
-        // Добавить информацию для отладки
-        function addDebugInfo(message) {
-            if (!debugMode) return;
-            
-            const debugContent = document.getElementById('debugContent');
-            const timestamp = new Date().toLocaleTimeString();
-            debugContent.innerHTML += `<div>[${timestamp}] ${message}</div>`;
-            debugContent.scrollTop = debugContent.scrollHeight;
-        }
-        
-        // Тест соединения с сервером
-        async function testConnection() {
-            try {
-                addDebugInfo('🔗 Тестирование соединения с сервером...');
-                const response = await fetch('/health');
-                const result = await response.json();
-                addDebugInfo(`✅ Сервер доступен: ${result.status}, БД: ${result.database}`);
-                alert(`Сервер: ${result.status}\nБД: ${result.database}`);
-            } catch (error) {
-                addDebugInfo(`❌ Ошибка соединения: ${error.message}`);
-                alert('❌ Сервер недоступен');
-            }
         }
         
         // Автоматический запуск при загрузке, если есть сохраненный студент
