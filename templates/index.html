@@ -693,114 +693,97 @@
             }
         }
         
-        // Загрузка списка занятий
-        async function loadClasses() {
-            try {
-                const response = await fetch('/api/get_classes');
-                const classes = await response.json();
-                
-                const classesList = document.getElementById('classesList');
-                const noClasses = document.getElementById('noClasses');
-                const classesCount = document.getElementById('classesCount');
-                
-                // Обновляем счетчик
-                const count = Array.isArray(classes) ? classes.length : 0;
-                classesCount.textContent = `(${count} занятий)`;
-                
-                if (!Array.isArray(classes) || classes.length === 0) {
-                    noClasses.style.display = 'block';
-                    classesList.innerHTML = '<p id="noClasses" style="text-align: center; padding: 30px; color: #666;">Занятий пока нет. Создайте первое занятие!</p>';
-                    
-                    // Сбрасываем выбранное занятие
-                    selectedClassId = null;
-                    currentClassName = 'Не выбрано';
-                    document.getElementById('currentClass').textContent = currentClassName;
-                    document.getElementById('generateQRBtn').disabled = true;
-                    document.getElementById('refreshQRBtn').disabled = true;
-                    document.getElementById('attendanceInfo').classList.add('hidden');
-                    document.getElementById('attendanceTable').style.display = 'none';
-                    document.getElementById('noAttendance').style.display = 'block';
-                    
-                    return;
-                }
-                
-                noClasses.style.display = 'none';
-                
-                let html = '';
-                classes.forEach(cls => {
-                    // Проверяем, что объект содержит необходимые свойства
-                    if (!cls || !cls.id || !cls.subject || !cls.date_time) return;
-                    
-                    const date = new Date(cls.date_time);
-                    const formattedDate = date.toLocaleString('ru-RU', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    });
-                    
-                    const isSelected = selectedClassId === cls.id;
-                    const escapedSubject = cls.subject.replace(/'/g, "&#39;").replace(/"/g, "&quot;");
-                    
-                    html += `
-                        <div class="class-item ${isSelected ? 'selected' : ''}" id="class-${cls.id}">
-                            <div class="class-header">
-                                <div>
-                                    <div class="class-title">${escapedSubject}</div>
-                                    <div class="class-date">${formattedDate}</div>
-                                </div>
-                                <div>
-                                    <small style="color: #666;">ID: ${cls.id}</small>
-                                </div>
-                            </div>
-                            <div class="class-actions">
-                                <button onclick="selectClass(${cls.id}, '${escapedSubject}')" class="${isSelected ? 'success' : ''}">
-                                    ${isSelected ? '✅ Выбрано' : '👁️ Выбрать'}
-                                </button>
-                                <button onclick="generateQR(${cls.id})" class="secondary">
-                                    📱 QR-код
-                                </button>
-                                <button onclick="deleteClass(${cls.id})" class="danger">
-                                    🗑️ Удалить
-                                </button>
-                                <button onclick="exportCSV(${cls.id})" class="export-btn">
-                                    📊 Excel
-                                </button>
-                            </div>
-                        </div>
-                    `;
-                });
-                
-                classesList.innerHTML = html;
-                
-            } catch (error) {
-                console.error('Ошибка загрузки занятий:', error);
-                showAlert('❌ Не удалось загрузить список занятий', 'error');
+// Загрузка списка занятий
+async function loadClasses() {
+    try {
+        const response = await fetch('/api/get_classes');
+        const classes = await response.json();
+        
+        const classesList = document.getElementById('classesList');
+        const noClasses = document.getElementById('noClasses');
+        const classesCount = document.getElementById('classesCount');
+        
+        // Обновляем счетчик
+        const count = Array.isArray(classes) ? classes.length : 0;
+        classesCount.textContent = `(${count} занятий)`;
+        
+        if (!Array.isArray(classes) || classes.length === 0) {
+            // Убедимся, что элемент noClasses существует
+            if (!document.getElementById('noClasses')) {
+                classesList.innerHTML = '<p id="noClasses" style="text-align: center; padding: 30px; color: #666;">Занятий пока нет. Создайте первое занятие!</p>';
+            } else {
+                document.getElementById('noClasses').style.display = 'block';
             }
+            
+            // Сбрасываем выбранное занятие
+            selectedClassId = null;
+            currentClassName = 'Не выбрано';
+            document.getElementById('currentClass').textContent = currentClassName;
+            document.getElementById('generateQRBtn').disabled = true;
+            document.getElementById('refreshQRBtn').disabled = true;
+            document.getElementById('attendanceInfo').classList.add('hidden');
+            document.getElementById('attendanceTable').style.display = 'none';
+            document.getElementById('noAttendance').style.display = 'block';
+            
+            return;
         }
         
-        // Выбор занятия
-        async function selectClass(classId, className) {
-            if (!classId) return;
+        // Скрываем сообщение "нет занятий"
+        if (noClasses) noClasses.style.display = 'none';
+        
+        let html = '';
+        classes.forEach(cls => {
+            // Проверяем, что объект содержит необходимые свойства
+            if (!cls || !cls.id || !cls.subject || !cls.date_time) return;
             
-            selectedClassId = classId;
-            currentClassName = className || `Занятие ${classId}`;
-            
-            document.getElementById('currentClass').textContent = currentClassName;
-            document.getElementById('generateQRBtn').disabled = false;
-            document.getElementById('refreshQRBtn').disabled = false;
-            document.getElementById('attendanceInfo').classList.remove('hidden');
-            
-            // Обновляем подсветку
-            document.querySelectorAll('.class-item').forEach(item => {
-                item.classList.remove('selected');
+            const date = new Date(cls.date_time);
+            const formattedDate = date.toLocaleString('ru-RU', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
             });
             
-            const selectedElement = document.getElementById(`class-${classId}`);
+            const isSelected = selectedClassId === cls.id;
+            const escapedSubject = cls.subject.replace(/'/g, "&#39;").replace(/"/g, "&quot;");
+            
+            html += `
+                <div class="class-item ${isSelected ? 'selected' : ''}" id="class-${cls.id}">
+                    <div class="class-header">
+                        <div>
+                            <div class="class-title">${escapedSubject}</div>
+                            <div class="class-date">${formattedDate}</div>
+                        </div>
+                        <div>
+                            <small style="color: #666;">ID: ${cls.id}</small>
+                        </div>
+                    </div>
+                    <div class="class-actions">
+                        <button onclick="selectClass(${cls.id}, '${escapedSubject}')" class="${isSelected ? 'success' : ''}">
+                            ${isSelected ? '✅ Выбрано' : '👁️ Выбрать'}
+                        </button>
+                        <button onclick="generateQR(${cls.id})" class="secondary">
+                            📱 QR-код
+                        </button>
+                        <button onclick="deleteClass(${cls.id})" class="danger">
+                            🗑️ Удалить
+                        </button>
+                        <button onclick="exportCSV(${cls.id})" class="export-btn">
+                            📊 Excel
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+        
+        classesList.innerHTML = html;
+        
+        // Если есть выбранное занятие, обновляем его выделение
+        if (selectedClassId) {
+            const selectedElement = document.getElementById(`class-${selectedClassId}`);
             if (selectedElement) {
                 selectedElement.classList.add('selected');
-                
                 // Обновляем текст кнопок
                 const buttons = selectedElement.querySelectorAll('button');
                 if (buttons[0]) {
@@ -808,18 +791,149 @@
                     buttons[0].classList.add('success');
                 }
             }
-            
-            // Загружаем посещаемость
-            await loadAttendance(classId);
-            
-            // НЕ генерируем QR-код автоматически, только включаем кнопку
-            document.getElementById('noQR').style.display = 'block';
-            document.getElementById('qrImage').classList.add('hidden');
-            document.getElementById('qrError').classList.add('hidden');
-            
-            // Запускаем автообновление посещаемости
-            startAutoRefresh();
         }
+        
+    } catch (error) {
+        console.error('Ошибка загрузки занятий:', error);
+        showAlert('❌ Не удалось загрузить список занятий', 'error');
+    }
+}
+
+// Создание занятия (исправленная версия)
+async function createClass() {
+    const subject = document.getElementById('subject').value.trim();
+    const dateTime = document.getElementById('date_time').value;
+    const createBtn = document.getElementById('createBtn');
+    const createBtnText = document.getElementById('createBtnText');
+    const alertDiv = document.getElementById('alert');
+    
+    if (!subject) {
+        showAlert('Введите название предмета!', 'error');
+        document.getElementById('subject').focus();
+        return;
+    }
+    
+    if (!dateTime) {
+        showAlert('Выберите дату и время занятия!', 'error');
+        document.getElementById('date_time').focus();
+        return;
+    }
+    
+    // Блокируем кнопку на время запроса
+    createBtn.disabled = true;
+    createBtnText.innerHTML = '<span class="loading"></span>Создание...';
+    
+    try {
+        const formData = new FormData();
+        formData.append('subject', subject);
+        formData.append('date_time', dateTime);
+        
+        const response = await fetch('/api/create_class', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showAlert('✅ Занятие успешно создано!', 'success');
+            
+            // Очищаем форму
+            document.getElementById('subject').value = '';
+            setDateTimeDefault();
+            
+            // УБЕДИТЕСЬ, что сначала загружаем список, а потом выбираем
+            await loadClasses();
+            
+            // Автоматически выбираем новое занятие
+            if (result.class_id) {
+                // Даем немного времени для обновления DOM
+                setTimeout(() => {
+                    selectClass(result.class_id, subject);
+                    // Показываем сообщение, что нужно сгенерировать QR-код
+                    showAlert('✅ Занятие создано! Теперь нажмите "Сгенерировать QR-код"', 'success');
+                }, 500);
+            }
+        } else {
+            showAlert(`❌ Ошибка: ${result.error || 'Неизвестная ошибка'}`, 'error');
+        }
+    } catch (error) {
+        showAlert(`❌ Ошибка сети: ${error.message}`, 'error');
+        console.error('Ошибка создания занятия:', error);
+    } finally {
+        // Восстанавливаем кнопку
+        createBtn.disabled = false;
+        createBtnText.textContent = '📝 Создать занятие';
+    }
+}
+
+// Выбор занятия (улучшенная версия)
+async function selectClass(classId, className) {
+    if (!classId) return;
+    
+    selectedClassId = classId;
+    currentClassName = className || `Занятие ${classId}`;
+    
+    document.getElementById('currentClass').textContent = currentClassName;
+    document.getElementById('generateQRBtn').disabled = false;
+    document.getElementById('refreshQRBtn').disabled = false;
+    document.getElementById('attendanceInfo').classList.remove('hidden');
+    
+    // Обновляем подсветку ВСЕХ занятий
+    document.querySelectorAll('.class-item').forEach(item => {
+        item.classList.remove('selected');
+        const button = item.querySelector('button');
+        if (button && button.textContent === '✅ Выбрано') {
+            button.textContent = '👁️ Выбрать';
+            button.classList.remove('success');
+        }
+    });
+    
+    const selectedElement = document.getElementById(`class-${classId}`);
+    if (selectedElement) {
+        selectedElement.classList.add('selected');
+        
+        // Обновляем текст кнопок
+        const buttons = selectedElement.querySelectorAll('button');
+        if (buttons[0]) {
+            buttons[0].textContent = '✅ Выбрано';
+            buttons[0].classList.add('success');
+        }
+    }
+    
+    // Загружаем посещаемость
+    await loadAttendance(classId);
+    
+    // НЕ генерируем QR-код автоматически
+    document.getElementById('noQR').style.display = 'block';
+    document.getElementById('qrImage').classList.add('hidden');
+    document.getElementById('qrError').classList.add('hidden');
+    
+    // Запускаем автообновление посещаемости
+    startAutoRefresh();
+}
+
+// Также добавьте эту вспомогательную функцию в конец скрипта:
+function checkServerStatus() {
+    fetch('/health')
+        .then(response => response.json())
+        .then(data => {
+            console.log('Статус сервера:', data.status);
+            console.log('Статус БД:', data.database);
+        })
+        .catch(error => {
+            console.error('Ошибка проверки сервера:', error);
+        });
+}
+
+// Проверяем сервер при загрузке
+document.addEventListener('DOMContentLoaded', function() {
+    updateStudentLink();
+    loadClasses();
+    setDateTimeDefault();
+    // Можно добавить проверку сервера
+    // checkServerStatus();
+});
         
         // Удаление занятия
         async function deleteClass(classId) {
