@@ -1,176 +1,707 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-    <title>Контроль посещаемости</title>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Система контроля посещаемости</title>
     <style>
-        body { font-family: Arial; margin: 20px; background: #f5f5f5; }
-        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-        h1 { color: #333; border-bottom: 2px solid #4CAF50; padding-bottom: 10px; }
-        .panel { background: #f9f9f9; padding: 20px; margin: 20px 0; border-radius: 5px; }
-        table { width: 100%; border-collapse: collapse; margin: 10px 0; }
-        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-        th { background: #4CAF50; color: white; }
-        .present { background: #d4edda; }
-        .absent { background: #f8d7da; }
-        .late { background: #fff3cd; }
-        button, select, input { padding: 8px 15px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; }
-        button { background: #4CAF50; color: white; cursor: pointer; }
-        button:hover { background: #45a049; }
-        .qr-img { max-width: 200px; margin: 10px 0; border: 1px solid #ccc; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            padding: 30px;
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        
+        h2 {
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #4CAF50;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+        
+        input, select, button {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        
+        input:focus, select:focus {
+            border-color: #4CAF50;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
+        }
+        
+        button {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 7px 20px rgba(76, 175, 80, 0.3);
+        }
+        
+        button.secondary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin-top: 10px;
+        }
+        
+        .classes-list {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+        
+        .class-item {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+        }
+        
+        .class-item:hover {
+            border-color: #4CAF50;
+            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.1);
+        }
+        
+        .class-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .class-title {
+            font-weight: 600;
+            color: #333;
+            font-size: 1.1rem;
+        }
+        
+        .class-date {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .class-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .class-actions button {
+            padding: 8px 15px;
+            font-size: 14px;
+        }
+        
+        .attendance-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        
+        .attendance-table th {
+            background: #4CAF50;
+            color: white;
+            padding: 15px;
+            text-align: left;
+        }
+        
+        .attendance-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .attendance-table tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .status-present {
+            background: #d4edda !important;
+            color: #155724;
+        }
+        
+        .status-absent {
+            background: #f8d7da !important;
+            color: #721c24;
+        }
+        
+        .status-late {
+            background: #fff3cd !important;
+            color: #856404;
+        }
+        
+        .qr-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .qr-image {
+            max-width: 200px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            background: white;
+        }
+        
+        .student-link {
+            background: #e8f4f8;
+            border: 2px dashed #4CAF50;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        
+        .copy-btn {
+            background: #17a2b8;
+            margin-top: 10px;
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-weight: 500;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            border-top: 1px solid #eee;
+            margin-top: 30px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🎓 Система контроля посещаемости</h1>
+        <header>
+            <h1>🎓 Система контроля посещаемости</h1>
+            <p class="subtitle">Генерация QR-кодов и отслеживание посещаемости студентов</p>
+        </header>
         
-        <!-- Панель создания занятия -->
-        <div class="panel">
-            <h2>Создать новое занятие</h2>
-            <form id="createClassForm">
-                <input type="text" name="subject" placeholder="Название предмета" required>
-                <input type="datetime-local" name="date_time" required>
-                <button type="submit">Создать занятие</button>
-            </form>
-        </div>
-        
-        <!-- Список занятий -->
-        <div class="panel">
-            <h2>Занятия</h2>
-            <div id="classesList">
-                {% for class in classes %}
-                <div style="margin: 10px 0; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
-                    <strong>{{ class.subject }}</strong> - {{ class.date_time }}
-                    <button onclick="generateQR({{ class.id }})">QR-код</button>
-                    <button onclick="loadAttendance({{ class.id }})">Посещаемость</button>
-                    <a href="/api/export_csv/{{ class.id }}"><button>CSV</button></a>
-                    <div id="qr_{{ class.id }}"></div>
+        <div class="main-content">
+            <!-- Левая колонка: Создание занятия и список -->
+            <div class="left-column">
+                <!-- Форма создания занятия -->
+                <div class="section">
+                    <h2>Создать новое занятие</h2>
+                    <div id="alert" class="alert hidden"></div>
+                    
+                    <div class="form-group">
+                        <label for="subject">Название предмета</label>
+                        <input type="text" id="subject" placeholder="Например: Программирование на Python" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="date_time">Дата и время занятия</label>
+                        <input type="datetime-local" id="date_time" required>
+                    </div>
+                    
+                    <button onclick="createClass()" id="createBtn">📝 Создать занятие</button>
                 </div>
-                {% endfor %}
+                
+                <!-- Список занятий -->
+                <div class="section">
+                    <h2>Ваши занятия</h2>
+                    <div id="classesList" class="classes-list">
+                        <p id="noClasses">Занятий пока нет. Создайте первое занятие!</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Правая колонка: Посещаемость и QR-код -->
+            <div class="right-column">
+                <!-- Посещаемость -->
+                <div class="section">
+                    <h2 id="attendanceTitle">Посещаемость: <span id="currentClass">Не выбрано</span></h2>
+                    <table class="attendance-table" id="attendanceTable">
+                        <thead>
+                            <tr>
+                                <th>Студент</th>
+                                <th>Группа</th>
+                                <th>Статус</th>
+                                <th>Изменить</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attendanceBody">
+                            <!-- Данные загружаются через JS -->
+                        </tbody>
+                    </table>
+                    <div id="noAttendance" class="hidden">
+                        <p style="text-align: center; padding: 20px; color: #666;">
+                            Выберите занятие для просмотра посещаемости
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- QR-код -->
+                <div class="section">
+                    <h2>QR-код для сканирования</h2>
+                    <div class="qr-container">
+                        <img id="qrImage" class="qr-image hidden" alt="QR Code">
+                        <p id="noQR" style="color: #666; padding: 20px;">
+                            Сгенерируйте QR-код для выбранного занятия
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Ссылка для студентов -->
+                <div class="section student-link">
+                    <h2>📱 Для студентов</h2>
+                    <p>Ссылка для отметки посещаемости:</p>
+                    <input type="text" id="studentLink" 
+                           value="https://attendance-system-rbif.onrender.com/scan" 
+                           readonly
+                           style="width: 100%; background: white; margin-top: 10px;">
+                    <button onclick="copyLink()" class="copy-btn">📋 Копировать ссылку</button>
+                    <p style="margin-top: 15px; font-size: 0.9rem; color: #555;">
+                        Отправьте эту ссылку студентам или покажите QR-код выше
+                    </p>
+                </div>
             </div>
         </div>
         
-        <!-- Таблица посещаемости -->
-        <div class="panel">
-            <h2>Посещаемость <span id="classTitle"></span></h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Студент</th>
-                        <th>Группа</th>
-                        <th>Статус</th>
-                        <th>Изменить</th>
-                    </tr>
-                </thead>
-                <tbody id="attendanceTable">
-                    {% for student in attendance %}
-                    <tr class="{{ student.status }}">
-                        <td>{{ student.name }}</td>
-                        <td>{{ student.group_name }}</td>
-                        <td>{{ student.status }}</td>
-                        <td>
-                            <select onchange="updateStatus({{ student.id }}, this.value)">
-                                <option value="present" {% if student.status == 'present' %}selected{% endif %}>Присутствовал</option>
-                                <option value="absent" {% if student.status == 'absent' %}selected{% endif %}>Отсутствовал</option>
-                                <option value="late" {% if student.status == 'late' %}selected{% endif %}>Опоздал</option>
-                            </select>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        
-        <!-- Ссылка для студентов -->
-        <div class="panel" style="background: #e8f4f8;">
-            <h2>📱 Для студентов</h2>
-            <p>Ссылка для отметки посещаемости:</p>
-            <input type="text" id="studentLink" value="{{ request.host_url }}scan" readonly style="width: 400px; padding: 10px;">
-            <button onclick="copyLink()">Копировать</button>
-            <p style="color: #666; font-size: 14px; margin-top: 10px;">
-                Отправьте эту ссылку студентам или покажите QR-код
+        <footer>
+            <p>Система контроля посещаемости с QR-кодами | Python + Flask + Render</p>
+            <p style="margin-top: 5px; font-size: 0.9rem;">
+                <a href="/scan" style="color: #4CAF50; text-decoration: none;">➡️ Перейти к странице сканирования</a> |
+                <a href="/health" style="color: #4CAF50; text-decoration: none;">🔧 Проверить статус системы</a>
             </p>
-        </div>
+        </footer>
     </div>
-    
+
     <script>
-        const selectedClassId = {{ selected_class }};
+        // Текущее выбранное занятие
+        let selectedClassId = null;
+        
+        // Загружаем занятия при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            loadClasses();
+            updateStudentLink();
+        });
+        
+        // Обновляем ссылку для студентов
+        function updateStudentLink() {
+            const baseUrl = window.location.origin;
+            document.getElementById('studentLink').value = `${baseUrl}/scan`;
+        }
         
         // Создание занятия
-        document.getElementById('createClassForm').onsubmit = async (e) => {
-            e.preventDefault();
-            const formData = new FormData(e.target);
+        async function createClass() {
+            const subject = document.getElementById('subject').value;
+            const dateTime = document.getElementById('date_time').value;
+            const createBtn = document.getElementById('createBtn');
+            const alertDiv = document.getElementById('alert');
             
-            const response = await fetch('/api/create_class', {
-                method: 'POST',
-                body: formData
-            });
-            
-            const result = await response.json();
-            if (result.success) {
-                alert('Занятие создано!');
-                location.reload();
+            if (!subject || !dateTime) {
+                showAlert('Заполните все поля!', 'error');
+                return;
             }
-        };
+            
+            // Блокируем кнопку на время запроса
+            createBtn.disabled = true;
+            createBtn.textContent = 'Создание...';
+            
+            try {
+                const formData = new FormData();
+                formData.append('subject', subject);
+                formData.append('date_time', dateTime);
+                
+                const response = await fetch('/api/create_class', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('✅ Занятие успешно создано!', 'success');
+                    // Очищаем форму
+                    document.getElementById('subject').value = '';
+                    document.getElementById('date_time').value = '';
+                    // Перезагружаем список занятий
+                    loadClasses();
+                } else {
+                    showAlert(`❌ Ошибка: ${result.error || 'Неизвестная ошибка'}`, 'error');
+                }
+            } catch (error) {
+                showAlert(`❌ Ошибка сети: ${error.message}`, 'error');
+                console.error('Ошибка создания занятия:', error);
+            } finally {
+                // Восстанавливаем кнопку
+                createBtn.disabled = false;
+                createBtn.textContent = '📝 Создать занятие';
+            }
+        }
         
-        // Генерация QR-кода
-        function generateQR(classId) {
-            const qrDiv = document.getElementById(`qr_${classId}`);
-            qrDiv.innerHTML = `<img src="/api/generate_qr/${classId}" class="qr-img" alt="QR Code">`;
+        // Загрузка списка занятий
+        async function loadClasses() {
+            try {
+                const response = await fetch('/api/get_classes');
+                const classes = await response.json();
+                
+                const classesList = document.getElementById('classesList');
+                const noClasses = document.getElementById('noClasses');
+                
+                if (classes.length === 0) {
+                    noClasses.style.display = 'block';
+                    classesList.innerHTML = '<p id="noClasses">Занятий пока нет. Создайте первое занятие!</p>';
+                    return;
+                }
+                
+                noClasses.style.display = 'none';
+                
+                let html = '';
+                classes.forEach(cls => {
+                    const date = new Date(cls.date_time);
+                    const formattedDate = date.toLocaleString('ru-RU', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                    
+                    html += `
+                        <div class="class-item" id="class-${cls.id}">
+                            <div class="class-header">
+                                <div>
+                                    <div class="class-title">${cls.subject}</div>
+                                    <div class="class-date">${formattedDate}</div>
+                                </div>
+                                <div>
+                                    <small style="color: #666;">ID: ${cls.id}</small>
+                                </div>
+                            </div>
+                            <div class="class-actions">
+                                <button onclick="selectClass(${cls.id}, '${cls.subject}')">
+                                    👁️ Выбрать
+                                </button>
+                                <button onclick="generateQR(${cls.id})" class="secondary">
+                                    📱 QR-код
+                                </button>
+                                <button onclick="exportCSV(${cls.id})" style="background: #6c757d;">
+                                    📊 CSV
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                classesList.innerHTML = html;
+                
+                // Автоматически выбираем первое занятие в списке
+                if (classes.length > 0 && !selectedClassId) {
+                    selectClass(classes[0].id, classes[0].subject);
+                }
+                
+            } catch (error) {
+                console.error('Ошибка загрузки занятий:', error);
+                showAlert('❌ Не удалось загрузить список занятий', 'error');
+            }
+        }
+        
+        // Выбор занятия
+        function selectClass(classId, className) {
+            selectedClassId = classId;
+            document.getElementById('currentClass').textContent = className;
+            document.getElementById('attendanceTitle').style.display = 'block';
+            
+            // Подсвечиваем выбранное занятие
+            document.querySelectorAll('.class-item').forEach(item => {
+                item.style.borderColor = '#e0e0e0';
+            });
+            const selectedElement = document.getElementById(`class-${classId}`);
+            if (selectedElement) {
+                selectedElement.style.borderColor = '#4CAF50';
+                selectedElement.style.boxShadow = '0 0 0 2px rgba(76, 175, 80, 0.2)';
+            }
+            
+            // Загружаем посещаемость для этого занятия
+            loadAttendance(classId);
         }
         
         // Загрузка посещаемости
         async function loadAttendance(classId) {
-            const response = await fetch(`/api/get_attendance/${classId}`);
-            const attendance = await response.json();
-            
-            const tbody = document.getElementById('attendanceTable');
-            tbody.innerHTML = '';
-            
-            attendance.forEach(student => {
-                const tr = document.createElement('tr');
-                tr.className = student.status;
-                tr.innerHTML = `
-                    <td>${student.name}</td>
-                    <td>${student.group_name}</td>
-                    <td>${student.status}</td>
-                    <td>
-                        <select onchange="updateStatus(${student.id}, this.value)">
-                            <option value="present" ${student.status === 'present' ? 'selected' : ''}>Присутствовал</option>
-                            <option value="absent" ${student.status === 'absent' ? 'selected' : ''}>Отсутствовал</option>
-                            <option value="late" ${student.status === 'late' ? 'selected' : ''}>Опоздал</option>
-                        </select>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-            
-            document.getElementById('classTitle').textContent = '(Текущее занятие)';
+            try {
+                const response = await fetch(`/api/get_attendance/${classId}`);
+                const attendance = await response.json();
+                
+                const attendanceBody = document.getElementById('attendanceBody');
+                const noAttendance = document.getElementById('noAttendance');
+                const attendanceTable = document.getElementById('attendanceTable');
+                
+                if (attendance.length === 0) {
+                    attendanceTable.style.display = 'none';
+                    noAttendance.style.display = 'block';
+                    return;
+                }
+                
+                attendanceTable.style.display = 'table';
+                noAttendance.style.display = 'none';
+                
+                let html = '';
+                attendance.forEach(student => {
+                    const statusClass = `status-${student.status}`;
+                    
+                    html += `
+                        <tr class="${statusClass}">
+                            <td>${student.name}</td>
+                            <td>${student.group_name}</td>
+                            <td>
+                                <span class="status-badge">
+                                    ${getStatusText(student.status)}
+                                </span>
+                            </td>
+                            <td>
+                                <select onchange="updateStatus(${student.id}, this.value)" 
+                                        style="width: auto; padding: 5px 10px;">
+                                    <option value="present" ${student.status === 'present' ? 'selected' : ''}>
+                                        Присутствовал
+                                    </option>
+                                    <option value="absent" ${student.status === 'absent' ? 'selected' : ''}>
+                                        Отсутствовал
+                                    </option>
+                                    <option value="late" ${student.status === 'late' ? 'selected' : ''}>
+                                        Опоздал
+                                    </option>
+                                </select>
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                attendanceBody.innerHTML = html;
+                
+            } catch (error) {
+                console.error('Ошибка загрузки посещаемости:', error);
+            }
         }
         
-        // Изменение статуса
-        function updateStatus(studentId, status) {
-            fetch('/api/update_status', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    student_id: studentId,
-                    class_id: selectedClassId,
-                    status: status
-                })
-            });
+        // Генерация QR-кода
+        async function generateQR(classId) {
+            try {
+                // Получаем QR-код как изображение
+                const response = await fetch(`/api/generate_qr/${classId}`);
+                
+                if (!response.ok) {
+                    throw new Error('Ошибка генерации QR-кода');
+                }
+                
+                // Создаем URL для изображения
+                const qrImage = document.getElementById('qrImage');
+                const noQR = document.getElementById('noQR');
+                
+                const blob = await response.blob();
+                const imageUrl = URL.createObjectURL(blob);
+                
+                qrImage.src = imageUrl;
+                qrImage.style.display = 'block';
+                noQR.style.display = 'none';
+                
+                showAlert('✅ QR-код сгенерирован!', 'success');
+                
+            } catch (error) {
+                console.error('Ошибка генерации QR-кода:', error);
+                showAlert('❌ Ошибка генерации QR-кода', 'error');
+            }
+        }
+        
+        // Обновление статуса студента
+        async function updateStatus(studentId, status) {
+            if (!selectedClassId) {
+                showAlert('Сначала выберите занятие!', 'error');
+                return;
+            }
             
-            // Меняем цвет строки
-            event.target.closest('tr').className = status;
+            try {
+                const response = await fetch('/api/update_status', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        student_id: studentId,
+                        class_id: selectedClassId,
+                        status: status
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Обновляем строку в таблице
+                    const row = event.target.closest('tr');
+                    row.className = `status-${status}`;
+                    
+                    // Обновляем текст статуса
+                    const statusCell = row.querySelector('.status-badge');
+                    if (statusCell) {
+                        statusCell.textContent = getStatusText(status);
+                    }
+                }
+                
+            } catch (error) {
+                console.error('Ошибка обновления статуса:', error);
+            }
+        }
+        
+        // Экспорт в CSV
+        async function exportCSV(classId) {
+            try {
+                const response = await fetch(`/api/export_csv/${classId}`);
+                const blob = await response.blob();
+                
+                // Создаем ссылку для скачивания
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `посещаемость_${classId}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                
+            } catch (error) {
+                console.error('Ошибка экспорта:', error);
+                showAlert('❌ Ошибка экспорта данных', 'error');
+            }
         }
         
         // Копирование ссылки
         function copyLink() {
             const linkInput = document.getElementById('studentLink');
             linkInput.select();
-            navigator.clipboard.writeText(linkInput.value);
-            alert('Ссылка скопирована!');
+            linkInput.setSelectionRange(0, 99999); // Для мобильных устройств
+            
+            try {
+                navigator.clipboard.writeText(linkInput.value).then(() => {
+                    showAlert('✅ Ссылка скопирована в буфер обмена!', 'success');
+                });
+            } catch (err) {
+                // Fallback для старых браузеров
+                document.execCommand('copy');
+                showAlert('✅ Ссылка скопирована!', 'success');
+            }
         }
+        
+        // Вспомогательные функции
+        function getStatusText(status) {
+            const statusMap = {
+                'present': 'Присутствовал',
+                'absent': 'Отсутствовал',
+                'late': 'Опоздал'
+            };
+            return statusMap[status] || status;
+        }
+        
+        function showAlert(message, type) {
+            const alertDiv = document.getElementById('alert');
+            alertDiv.textContent = message;
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.style.display = 'block';
+            
+            // Автоматически скрываем через 5 секунд
+            setTimeout(() => {
+                alertDiv.style.display = 'none';
+            }, 5000);
+        }
+        
+        // Автоматическое обновление списка каждые 30 секунд
+        setInterval(loadClasses, 30000);
+        
     </script>
 </body>
 </html>
